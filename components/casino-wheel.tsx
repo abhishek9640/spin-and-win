@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export function CasinoWheel() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isSpinning, setIsSpinning] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -26,8 +27,8 @@ export function CasinoWheel() {
     const segments = prizes.length
     const size = 400
     let rotation = 0
-    let isSpinning = false
     let spinSpeed = 0
+    let animationFrameId: number
 
     canvas.width = size
     canvas.height = size
@@ -51,7 +52,13 @@ export function CasinoWheel() {
         ctx.beginPath()
         ctx.fillStyle = prizes[i].color
         ctx.moveTo(size / 2, size / 2)
-        ctx.arc(size / 2, size / 2, size / 2 - 10, i * anglePerSegment + rotation, (i + 1) * anglePerSegment + rotation)
+        ctx.arc(
+          size / 2,
+          size / 2,
+          size / 2 - 10,
+          i * anglePerSegment + rotation,
+          (i + 1) * anglePerSegment + rotation
+        )
         ctx.lineTo(size / 2, size / 2)
         ctx.fill()
         ctx.closePath()
@@ -83,25 +90,40 @@ export function CasinoWheel() {
       // Update rotation
       if (isSpinning) {
         rotation += spinSpeed
-        spinSpeed *= 0.99 // Gradually slow down
-        if (spinSpeed < 0.001) {
-          isSpinning = false
+        spinSpeed *= 0.98 // Gradually slow down
+        if (spinSpeed < 0.002) {
+          spinSpeed = 0
+          setIsSpinning(false)
+          determineWinner()
         }
       }
 
-      requestAnimationFrame(drawWheel)
+      animationFrameId = requestAnimationFrame(drawWheel)
+    }
+
+    function determineWinner() {
+      const anglePerSegment = (Math.PI * 2) / segments
+      const normalizedRotation = (rotation % (Math.PI * 2)) + anglePerSegment / 2
+      const winningIndex = Math.floor((segments - (normalizedRotation / anglePerSegment)) % segments)
+      console.log(`Winner: ${prizes[winningIndex].text}`)
     }
 
     drawWheel()
 
-    // Add click handler to spin the wheel
-    canvas.addEventListener("click", () => {
+    function spinWheel() {
       if (!isSpinning) {
-        isSpinning = true
-        spinSpeed = 0.5
+        setIsSpinning(true)
+        spinSpeed = 0.3 + Math.random() * 0.5 // Random spin speed
       }
-    })
-  }, [])
+    }
+
+    canvas.addEventListener("click", spinWheel)
+
+    return () => {
+      canvas.removeEventListener("click", spinWheel)
+      cancelAnimationFrame(animationFrameId)
+    }
+  }, [isSpinning])
 
   return (
     <div className="relative">
@@ -112,4 +134,3 @@ export function CasinoWheel() {
     </div>
   )
 }
-

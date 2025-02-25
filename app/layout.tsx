@@ -1,6 +1,6 @@
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { Web3Provider } from "@/providers/web3-provider"
+// import { Web3Provider } from "@/providers/web3-provider"
 import SessionProviderWrapper from "@/components/sessionProvider"
 import type React from "react"
 
@@ -21,7 +21,8 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         {/* Wrap the entire app with both providers */}
         <SessionProviderWrapper>
-          <Web3Provider>{children}</Web3Provider>
+          {children}
+          {/* <Web3Provider>{children}</Web3Provider> */}
         </SessionProviderWrapper>
       </body>
     </html>

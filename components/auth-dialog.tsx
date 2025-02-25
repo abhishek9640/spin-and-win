@@ -1,49 +1,167 @@
 "use client";
 
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { signIn, useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function LoginButton() {
   const [open, setOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { data: session } = useSession();
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+
   const router = useRouter();
 
+  // Check if user is logged in (token exists in localStorage)
+  useEffect(() => {
+    const storedToken = localStorage.getItem("authToken");
+    setToken(storedToken);
+    console.log("token",storedToken);
+  }, []);
+
+  // Handle Login
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
+    setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false, // Prevent NextAuth from redirecting
-    });
+    try {
+      const response = await fetch("https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (result?.error) {
-      setErrorMessage(result.error);
-    } else {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Login failed");
+
+      localStorage.setItem("authToken", data.token);
+      setToken(data.token);
       setOpen(false);
-      // Refresh the page to reflect the updated session state (or route back to the current page)
-      router.refresh()  
+      router.refresh();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error instanceof Error) {
+          if (error instanceof Error) {
+            setErrorMessage((error as Error).message);
+          } else {
+            setErrorMessage("An unknown error occurred");
+          }
+        } else {
+          setErrorMessage("An unknown error occurred");
+        }
+      } else {
+        setErrorMessage("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Handle Signup
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const username = formData.get("username") as string;
+    const email = formData.get("email") as string;
+    const phone_number = formData.get("phone_number") as string;
+    const otp = formData.get("otp") as string;
+    const password = formData.get("password") as string;
+    const confirm_password = formData.get("confirm_password") as string;
+    const gender = formData.get("gender") as string;
+    const role = formData.get("role") as string;
+
+    if (password !== confirm_password) {
+      setErrorMessage("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/auth/sign-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, phone_number, otp, password, confirm_password, gender, role }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Signup failed");
+
+      setSuccessMessage("Signup successful! You can now log in.");
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // Handle OTP Request
+  const handleSendOtp = async (email: string) => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch("https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to send OTP");
+
+      setOtpSent(true);
+      setSuccessMessage("OTP sent successfully. Check your email.");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Sign Out
+  const handleSignOut = () => {
+    localStorage.removeItem("authToken");
+    setToken(null);
+    router.refresh();
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">{session ? "Sign Out" : "Sign In"}</Button>
+        <Button variant="outline" onClick={token ? handleSignOut : () => setOpen(true)}>
+          {token ? "Sign Out" : "Sign In"}
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-white/95 backdrop-blur-lg dark:bg-neutral-950/95">
         <DialogHeader>
@@ -51,103 +169,116 @@ export function LoginButton() {
             Welcome to Crypto Spin
           </DialogTitle>
           <DialogDescription className="text-neutral-500 dark:text-neutral-400">
-            {session
-              ? `Signed in as ${session.user?.email}`
+            {token
+              ? `You are signed in.`
               : "Sign in or create an account to start playing"}
           </DialogDescription>
         </DialogHeader>
-        
-        {!session ? (
+
+        {!token ? (
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
+
+            {/* LOGIN FORM */}
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    required
-                    className="bg-white/50 dark:bg-neutral-950/50"
-                    aria-describedby="signin-email-description"
-                  />
-                  <p id="signin-email-description" className="text-sm text-neutral-500 dark:text-neutral-400">
-                    Enter your registered email address
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    name="password"
-                    type="password"
-                    required
-                    className="bg-white/50 dark:bg-neutral-950/50"
-                    aria-describedby="signin-password-description"
-                  />
-                  <p id="signin-password-description" className="text-sm text-neutral-500 dark:text-neutral-400">
-                    Enter your password
-                  </p>
-                </div>
-                {errorMessage && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{errorMessage}</AlertDescription>
-                  </Alert>
-                )}
-                <SubmitButton>Sign In</SubmitButton>
+                <InputField id="signin-email" name="email" label="Email" type="email" />
+                <InputField id="signin-password" name="password" label="Password" type="password" />
+                <SubmitButton loading={loading}>Sign In</SubmitButton>
               </form>
-              <Button
-                variant="outline"
-                className="w-full mt-2"
-                onClick={() => signIn("google")}
-              >
-                Sign In with Google
-              </Button>
             </TabsContent>
+
+            {/* SIGNUP FORM */}
             <TabsContent value="signup">
-              <p className="text-neutral-500 dark:text-neutral-400">
-                Signup is currently disabled. Use Google authentication instead.
-              </p>
-              <Button
-                variant="outline"
-                className="w-full mt-2"
-                onClick={() => signIn("google")}
-              >
-                Sign Up with Google
-              </Button>
+              <div className="max-h-[80vh] overflow-y-auto p-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <InputField id="signup-username" name="username" label="Username" type="text" />
+                  <InputField id="signup-email" name="email" label="Email" type="email" />
+                  <InputField id="signup-phone" name="phone_number" label="Phone Number" type="tel" />
+
+                  <Button type="button" className="w-full mt-2"
+                    onClick={() => handleSendOtp((document.getElementById("signup-email") as HTMLInputElement)?.value)}>
+                    Send OTP
+                  </Button>
+
+                  {otpSent && <InputField id="signup-otp" name="otp" label="OTP" type="text" />}
+
+                  <InputField id="signup-password" name="password" label="Password" type="password" />
+                  <InputField id="signup-confirm-password" name="confirm_password" label="Confirm Password" type="password" />
+
+                  <div className="flex flex-col">
+                    <label htmlFor="signup-gender">Gender</label>
+                    <select id="signup-gender" name="gender" className="border rounded p-2">
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label htmlFor="signup-role">Role</label>
+                    <select id="signup-role" name="role" className="border rounded p-2">
+                      <option value="User">User</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </div>
+
+                  <SubmitButton loading={loading}>Sign Up</SubmitButton>
+                </form>
+              </div>
             </TabsContent>
+
+
           </Tabs>
         ) : (
           <div className="flex flex-col items-center space-y-4">
-            <p className="text-center text-neutral-500 dark:text-neutral-400">
-              Signed in as <strong>{session.user?.email}</strong>
-            </p>
-            <Button onClick={() => signOut()} className="w-full">
-              Sign Out
-            </Button>
-          </div>
+  <p className="text-center text-neutral-500 dark:text-neutral-400">
+    You are logged in.
+  </p>
+
+  {/* Go to Profile Button */}
+  <Link href="/profile" className="w-full">
+    <Button variant="outline" className="w-full">Go to Profile</Button>
+  </Link>
+
+  {/* Sign Out Button */}
+  <Button onClick={handleSignOut} className="w-full">
+    Sign Out
+  </Button>
+</div>
+
+        )}
+
+        {errorMessage && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+        {successMessage && (
+          <Alert variant="default">
+            <AlertDescription>{successMessage}</AlertDescription>
+          </Alert>
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function SubmitButton({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(false);
-
+// Helper Components
+function InputField({ id, name, label, type }: { id: string; name: string; label: string; type: string }) {
   return (
-    <Button
-      type="submit"
-      className="w-full bg-neutral-900 hover:bg-neutral-900/90 dark:bg-neutral-50 dark:hover:bg-neutral-50/90"
-      disabled={loading}
-      onClick={() => setLoading(true)}
-    >
-      {loading ? "Loading..." : children}
-    </Button>
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} name={name} type={type} required />
+    </div>
   );
+}
+
+function SubmitButton({ children, loading }: { children: React.ReactNode; loading: boolean }) {
+  return <Button type="submit" className="w-full" disabled={loading}>{loading ? "Loading..." : children}</Button>;
 }

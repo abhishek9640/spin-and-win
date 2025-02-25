@@ -15,7 +15,7 @@ export default function ContactPage() {
               <CardTitle className="text-2xl bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
                 Contact Us
               </CardTitle>
-              <CardDescription>Have questions? We'd love to hear from you.</CardDescription>
+              <CardDescription>Have questions? We had love to hear from you.</CardDescription>
             </CardHeader>
             <CardContent>
               <form className="space-y-4">

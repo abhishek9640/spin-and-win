@@ -34,6 +34,7 @@ export function CasinoWheel() {
     canvas.height = size
 
     function drawWheel() {
+      if (!ctx) return
       ctx.clearRect(0, 0, size, size)
 
       // Draw outer ring with neon effect

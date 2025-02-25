@@ -11,7 +11,7 @@ const handler = NextAuth({
       },
       async authorize(credentials) {
         // Replace with actual authentication logic
-        if (credentials?.email === "test@example.com" && credentials?.password === "password") {
+        if (credentials?.email === "abhishekgupta9640@gmail.com" && credentials?.password === "123456789") {
           return { id: "1", name: "Test User", email: credentials.email };
         }
         return null; 

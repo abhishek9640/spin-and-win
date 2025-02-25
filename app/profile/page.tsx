@@ -41,8 +41,9 @@ export default function ProfilePage() {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        throw new Error("Authentication token not found. Please log in.");
-      }
+          throw new Error("Authentication token not found. Please log in.");
+        }
+        console.log("token", token);
 
       const response = await fetch(
         "https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/user/details",

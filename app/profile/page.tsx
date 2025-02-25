@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Image from "next/image";
 
 interface Profile {
   _id: string;
@@ -124,7 +125,7 @@ export default function ProfilePage() {
       {profile ? (
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           <div className="flex items-center space-x-4">
-            <img
+            <Image
               src={profile.profile_pic?.Location}
               alt="Profile"
               className="w-16 h-16 rounded-full border"

@@ -22,7 +22,6 @@ export default function RootLayout({
         {/* Wrap the entire app with both providers */}
         <SessionProviderWrapper>
           {children}
-          {/* <Web3Provider>{children}</Web3Provider> */}
         </SessionProviderWrapper>
       </body>
     </html>

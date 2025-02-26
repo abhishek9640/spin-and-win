@@ -1,13 +1,14 @@
 "use client";
 
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
 
+// Profile Type
 interface Profile {
   _id: string;
   username: string;
@@ -21,6 +22,15 @@ interface Profile {
   is_email_verified: boolean;
 }
 
+// Extend NextAuth Session to include authToken
+declare module "next-auth" {
+  interface Session {
+    user: {
+      authToken?: string;
+    };
+  }
+}
+
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -28,42 +38,44 @@ export default function ProfilePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (session) {
-      fetchProfile();
-    }
-  }, [session]);
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const fetchProfile = async () => {
+  // Fetch Profile Function
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
 
-    try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-          throw new Error("Authentication token not found. Please log in.");
-        }
-        console.log("token", token);
+    console.log("Fetching profile data...", session?.user?.authToken);
 
-      const response = await fetch(
-        "https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/user/details",
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+    try {
+      if (!session?.user?.authToken) throw new Error("Authentication token not found. Please log in.");
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/user/details`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${session.user.authToken}` },
+      });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Failed to fetch profile");
 
-      setProfile(result.data);
+      setProfile(result.data); // ✅ Store user profile data
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred");
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.authToken, API_BASE_URL]);
 
+  // Fetch user profile when session is available
+  useEffect(() => {
+    console.log("Session:", session);
+    console.log("Status:", status);
+    if (session?.user?.authToken && status === "authenticated") {
+      fetchProfile();
+    }
+  }, [session, status, fetchProfile]);
+
+  // Update Profile Function
   const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -78,25 +90,19 @@ export default function ProfilePage() {
     };
 
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("Authentication token not found. Please log in.");
-      }
+      if (!session?.user?.authToken) throw new Error("Authentication token not found. Please log in.");
 
-      const response = await fetch(
-        "https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/user/update",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(updatedProfile),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/v1/user/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.user.authToken}` },
+        body: JSON.stringify(updatedProfile),
+      });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Update failed");
 
       setSuccessMessage("Profile updated successfully");
-      fetchProfile(); // Refresh profile data
+      fetchProfile();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred");
     } finally {
@@ -111,59 +117,26 @@ export default function ProfilePage() {
     <div className="container py-8 max-w-lg mx-auto">
       <h2 className="text-2xl font-bold mb-4">Profile</h2>
 
-      {errorMessage && (
-        <Alert variant="destructive">
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert variant="default">
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
+      {errorMessage && <Alert variant="destructive"><AlertDescription>{errorMessage}</AlertDescription></Alert>}
+      {successMessage && <Alert variant="default"><AlertDescription>{successMessage}</AlertDescription></Alert>}
 
       {profile ? (
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           <div className="flex items-center space-x-4">
-            <Image
-              src={profile.profile_pic?.Location}
-              alt="Profile"
-              className="w-16 h-16 rounded-full border"
-            />
+            <Image src={profile.profile_pic?.Location || "/default-avatar.png"} alt="Profile" width={64} height={64} className="rounded-full border" />
             <div>
               <p className="text-lg font-medium">{profile.username}</p>
               <p className="text-sm text-gray-500">{profile.email}</p>
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" name="username" type="text" defaultValue={profile.username} />
-          </div>
+          <Label htmlFor="username">Username</Label>
+          <Input id="username" name="username" type="text" defaultValue={profile.username} required />
 
-          <div>
-            <Label htmlFor="phone_number">Phone Number</Label>
-            <Input
-              id="phone_number"
-              name="phone_number"
-              type="tel"
-              defaultValue={profile.phone_number}
-            />
-          </div>
+          <Label htmlFor="phone_number">Phone Number</Label>
+          <Input id="phone_number" name="phone_number" type="tel" defaultValue={profile.phone_number} required />
 
-          <div>
-            <Label htmlFor="gender">Gender</Label>
-            <select id="gender" name="gender" defaultValue={profile.gender} className="border rounded p-2 w-full">
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <Button type="submit" disabled={loading}>
-            {loading ? "Updating..." : "Update Profile"}
-          </Button>
+          <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Profile"}</Button>
         </form>
       ) : (
         <p className="text-center">Fetching profile data...</p>

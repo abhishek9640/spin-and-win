@@ -28,6 +28,8 @@ export function LoginButton() {
 
   const router = useRouter();
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
   // Check if user is logged in (token exists in localStorage)
   useEffect(() => {
     const storedToken = localStorage.getItem("authToken");
@@ -46,16 +48,18 @@ export function LoginButton() {
     const password = formData.get("password") as string;
 
     try {
-      const response = await fetch("https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const parsedResponse = await response.json();     
+      const data = parsedResponse.data;
       if (!response.ok) throw new Error(data.message || "Login failed");
 
       localStorage.setItem("authToken", data.token);
+      console.log("token",data.token);
       setToken(data.token);
       setOpen(false);
       router.refresh();
@@ -102,7 +106,7 @@ export function LoginButton() {
     }
 
     try {
-      const response = await fetch("https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/auth/sign-up", {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/sign-up`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, phone_number, otp, password, confirm_password, gender, role }),
@@ -127,7 +131,7 @@ export function LoginButton() {
     setLoading(true);
 
     try {
-      const response = await fetch("https://13c3-2409-4055-9e-c3c0-b281-6081-74f7-17.ngrok-free.app/api/v1/auth/send-otp", {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

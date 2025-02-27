@@ -1,6 +1,5 @@
 import { Inter } from "next/font/google"
 import "./globals.css"
-// import { Web3Provider } from "@/providers/web3-provider"
 import SessionProviderWrapper from "@/components/sessionProvider"
 import type React from "react"
 

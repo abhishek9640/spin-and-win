@@ -40,31 +40,45 @@ export default function ProfilePage() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // Fetch Profile Function
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
-
-    console.log("Fetching profile data...", session?.user?.authToken);
-
+  
+    console.log("🔹 Fetching profile data...");
+    console.log("🔹 Session Data:", session);
+    console.log("🔹 Auth Token:", session?.user?.authToken);
+  
     try {
-      if (!session?.user?.authToken) throw new Error("Authentication token not found. Please log in.");
-
+      if (!session?.user?.authToken) {
+        throw new Error("Authentication token not found. Please log in.");
+      }
+  
       const response = await fetch(`${API_BASE_URL}/api/v1/user/details`, {
         method: "GET",
-        headers: { Authorization: `Bearer ${session.user.authToken}` },
+        headers: { 
+          "Authorization": `Bearer ${session.user.authToken}`,
+          "Content-Type": "application/json"
+        },
       });
-
+  
+      console.log("🔹 API Response Status:", response.status);
+  
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Failed to fetch profile");
-
+      console.log("🔹 API Response Data:", result);
+  
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to fetch profile");
+      }
+  
       setProfile(result.data); // ✅ Store user profile data
     } catch (error) {
+      console.error("❌ Fetch Profile Error:", error);
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred");
     } finally {
       setLoading(false);
     }
   }, [session?.user?.authToken, API_BASE_URL]);
+  
 
   // Fetch user profile when session is available
   useEffect(() => {

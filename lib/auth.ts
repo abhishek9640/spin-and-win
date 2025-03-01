@@ -27,31 +27,47 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
+          console.log("🔹 Received credentials:", credentials);
+      
           const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
           });
-
+      
           const responseData = await res.json();
-          if (!res.ok) throw new Error(responseData.message || "Authentication failed");
-
-          if (!responseData.data || !responseData.token) {
+          console.log("🔹 API Response:", responseData);
+      
+          if (!res.ok) {
+            console.error("❌ Login failed:", responseData.message);
+            throw new Error(responseData.message || "Authentication failed");
+          }
+      
+          if (!responseData.data || !responseData.data.token) {
+            console.error("❌ Invalid API response:", responseData);
             throw new Error("Invalid response data received");
           }
-
-          return { ...responseData.data, authToken: responseData.token } as CustomUser;
+      
+          console.log("✅ User authenticated:", responseData.data);
+      
+          return {
+            id: responseData.data._id,
+            username: responseData.data.username,
+            email: responseData.data.email,
+            profile_pic: responseData.data.profile_pic.Location,
+            authToken: responseData.data.token, // Store token
+          };
         } catch (error) {
-          console.error("Authorization error:", error);
-          throw new Error("Internal server error");
+          console.error("🚨 Authorization error:", error);
+          throw new Error(error instanceof Error ? error.message : "Internal server error");
         }
-      },
+      }  
     }),
   ],
+  pages: {
+    signIn: `${API_BASE_URL}/api/auth/signin/credentials`,
+  },
 
-    pages: {
-        signIn: "/auth/signin",
-    },
   callbacks: {
     async jwt({ token, user }: { token: CustomJWT; user?: User | AdapterUser }) {
       if (user && "authToken" in user) {

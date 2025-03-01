@@ -64,9 +64,6 @@ export const authOptions: NextAuthOptions = {
       }  
     }),
   ],
-  pages: {
-    signIn: `${API_BASE_URL}/api/auth/signin/credentials`,
-  },
 
   callbacks: {
     async jwt({ token, user }: { token: CustomJWT; user?: User | AdapterUser }) {

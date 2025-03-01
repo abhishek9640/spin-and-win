@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import {
   Dialog,
@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
 
 export function LoginButton() {
-  const { data: session } = useSession();
+  const { data: session, status, update } = useSession();
   const [open, setOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -126,6 +126,15 @@ export function LoginButton() {
         setLoading(false);
       }
     };
+
+useEffect(() => {
+  if (status === "authenticated" && !session?.user?.authToken) {
+    update();
+  }
+}, [session, status, update]);
+
+console.log("Session:", session?.user?.authToken);
+console.log("Status:", status);
 
   // Handle Sign Out
   const handleSignOut = async () => {

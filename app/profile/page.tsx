@@ -56,7 +56,7 @@ export default function ProfilePage() {
       const response = await fetch(`${API_BASE_URL}/api/v1/user/details`, {
         method: "GET",
         headers: { 
-          "Authorization": `Bearer ${session.user.authToken}`,
+          "Authorization":  `${session.user.authToken}`,
           "Content-Type": "application/json"
         },
       });
@@ -77,7 +77,7 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.authToken, API_BASE_URL]);
+  }, [session, API_BASE_URL]);
   
 
   // Fetch user profile when session is available
@@ -108,7 +108,7 @@ export default function ProfilePage() {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/user/update`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.user.authToken}` },
+        headers: { "Content-Type": "application/json", Authorization: `${session.user.authToken}` },
         body: JSON.stringify(updatedProfile),
       });
 
@@ -137,7 +137,7 @@ export default function ProfilePage() {
       {profile ? (
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           <div className="flex items-center space-x-4">
-            <Image src={profile.profile_pic?.Location || "/default-avatar.png"} alt="Profile" width={64} height={64} className="rounded-full border" />
+            <Image src={profile?.profile_pic?.Location || "/default-avatar.png"} alt="Profile" width={64} height={64} className="rounded-full border" />
             <div>
               <p className="text-lg font-medium">{profile.username}</p>
               <p className="text-sm text-gray-500">{profile.email}</p>
@@ -158,3 +158,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

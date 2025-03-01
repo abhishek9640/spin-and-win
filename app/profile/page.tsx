@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
+import { Header } from "@/components/header";
+import { useRouter } from "next/navigation";
 
 // Profile Type
 interface Profile {
@@ -37,6 +39,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -78,6 +81,12 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [session, API_BASE_URL]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/");
+    }
+  }, [status, router]);
   
 
   // Fetch user profile when session is available
@@ -128,6 +137,8 @@ export default function ProfilePage() {
   if (!session) return <p>Please log in to view your profile.</p>;
 
   return (
+    <div className="min-h-screen bg-background text-foreground">
+          <Header />
     <div className="container py-8 max-w-lg mx-auto">
       <h2 className="text-2xl font-bold mb-4">Profile</h2>
 
@@ -155,6 +166,7 @@ export default function ProfilePage() {
       ) : (
         <p className="text-center">Fetching profile data...</p>
       )}
+    </div>
     </div>
   );
 }

@@ -139,7 +139,6 @@ console.log("Status:", status);
   // Handle Sign Out
   const handleSignOut = async () => {
     await signOut();
-    router.refresh();
   };
 
   return (

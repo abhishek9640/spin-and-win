@@ -1,17 +1,18 @@
 "use client"
 
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
+import { Sparkles, User } from "lucide-react"
 import { LoginButton } from "./auth-dialog"
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 export function Header() {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   const navItems = [
     { name: "Home", path: "/" },
     { name: "About", path: "/about" },
-    // { name: "Contact", path: "/contact" },
   ]
 
   return (
@@ -38,9 +39,15 @@ export function Header() {
             ))}
           </nav>
         </div>
-        <LoginButton />
+        <div className="flex items-center gap-4">
+          <LoginButton />
+          {session && (
+            <Link href="/profile">
+              <User className="h-6 w-6 text-neutral-900 dark:text-neutral-50 hover:text-primary transition-colors" />
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   )
 }
-

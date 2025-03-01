@@ -23,7 +23,7 @@ export function LoginButton() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // const [otpSent, setOtpSent] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
 
   const router = useRouter();
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -65,13 +65,26 @@ export function LoginButton() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const userData = Object.fromEntries(formData.entries());
+    const username = formData.get("username") as string;
+    const email = formData.get("email") as string;
+    const phone_number = formData.get("phone_number") as string;
+    const otp = formData.get("otp") as string;
+    const password = formData.get("password") as string;
+    const confirm_password = formData.get("confirm_password") as string;
+    const gender = formData.get("gender") as string;
+    const role = formData.get("role") as string;
+
+    if (password !== confirm_password) {
+      setErrorMessage("Passwords do not match");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/sign-up`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({ username, email, phone_number, otp, password, confirm_password, gender, role }),
       });
 
       const data = await response.json();
@@ -84,6 +97,35 @@ export function LoginButton() {
       setLoading(false);
     }
   };
+
+    // Handle OTP Request
+    const handleSendOtp = async (email: string) => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setLoading(true);
+  
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+  
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to send OTP");
+  
+        setOtpSent(true);
+        setSuccessMessage("OTP sent successfully. Check your email.");
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage("An unknown error occurred");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
 
   // Handle Sign Out
   const handleSignOut = async () => {
@@ -122,16 +164,47 @@ export function LoginButton() {
               </form>
             </TabsContent>
 
-            {/* SIGNUP FORM */}
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <InputField id="signup-username" name="username" label="Username" type="text" />
-                <InputField id="signup-email" name="email" label="Email" type="email" />
-                <InputField id="signup-password" name="password" label="Password" type="password" />
-                <InputField id="signup-confirm-password" name="confirm_password" label="Confirm Password" type="password" />
-                <SubmitButton loading={loading}>Sign Up</SubmitButton>
-              </form>
+{/* SIGNUP FORM */}
+<TabsContent value="signup">
+              <div className="max-h-[80vh] overflow-y-auto p-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <InputField id="signup-username" name="username" label="Username" type="text" />
+                  <InputField id="signup-email" name="email" label="Email" type="email" />
+                  <InputField id="signup-phone" name="phone_number" label="Phone Number" type="tel" />
+
+                  <Button type="button" className="w-full mt-2"
+                    onClick={() => handleSendOtp((document.getElementById("signup-email") as HTMLInputElement)?.value)}>
+                    Send OTP
+                  </Button>
+
+                  {otpSent && <InputField id="signup-otp" name="otp" label="OTP" type="text" />}
+
+                  <InputField id="signup-password" name="password" label="Password" type="password" />
+                  <InputField id="signup-confirm-password" name="confirm_password" label="Confirm Password" type="password" />
+
+                  <div className="flex flex-col">
+                    <label htmlFor="signup-gender">Gender</label>
+                    <select id="signup-gender" name="gender" className="border rounded p-2">
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label htmlFor="signup-role">Role</label>
+                    <select id="signup-role" name="role" className="border rounded p-2">
+                      <option value="User">User</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </div>
+
+                  <SubmitButton loading={loading}>Sign Up</SubmitButton>
+                </form>
+              </div>
             </TabsContent>
+
           </Tabs>
         ) : (
           <div className="flex flex-col items-center space-y-4">

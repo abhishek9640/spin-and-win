@@ -2,6 +2,7 @@ import type React from "react"
 import { Sidebar } from "@/components/admin/sidebar"
 import { Navbar } from "@/components/admin/navbar"
 import { AdminProvider } from "@/components/admin/admin-provider"
+// import { Header } from "@/components/header"
 
 export default function AdminLayout({
   children,
@@ -9,7 +10,8 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <AdminProvider>
+      <AdminProvider>
+        {/* <Header /> */}
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="flex">

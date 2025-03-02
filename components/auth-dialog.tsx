@@ -191,22 +191,30 @@ console.log("Status:", status);
                   <InputField id="signup-confirm-password" name="confirm_password" label="Confirm Password" type="password" />
 
                   <div className="flex flex-col">
-                    <label htmlFor="signup-gender">Gender</label>
-                    <select id="signup-gender" name="gender" className="border rounded p-2">
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+  <label htmlFor="signup-gender">Gender</label>
+  <select
+    id="signup-gender"
+    name="gender"
+    className="border rounded p-2 text-black"
+  >
+    <option value="">Select Gender</option>
+    <option value="Male">Male</option>
+    <option value="Female">Female</option>
+    <option value="Other">Other</option>
+  </select>
+</div>
 
-                  <div className="flex flex-col">
-                    <label htmlFor="signup-role">Role</label>
-                    <select id="signup-role" name="role" className="border rounded p-2">
-                      <option value="User">User</option>
-                      <option value="Admin">Admin</option>
-                    </select>
-                  </div>
+<div className="flex flex-col">
+  <label htmlFor="signup-role">Role</label>
+  <select
+    id="signup-role"
+    name="role"
+    className="border rounded p-2 text-black"
+  >
+    <option value="User">User</option>
+    <option value="Admin">Admin</option>
+  </select>
+</div>
 
                   <SubmitButton loading={loading}>Sign Up</SubmitButton>
                 </form>

@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
 import { Header } from "@/components/header";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 // Profile Type
 interface Profile {
@@ -39,6 +40,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [open, setOpen] = useState(false);
   const router = useRouter();
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -98,6 +101,50 @@ export default function ProfilePage() {
     }
   }, [session, status, fetchProfile]);
 
+  // Profile Picture Update
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!file) {
+      setErrorMessage("Please select an image file.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (!session?.user?.authToken) throw new Error("Authentication token not found. Please log in.");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/user/upload-pic`, {
+        method: "POST",
+        headers: { Authorization: `${session.user.authToken}` },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Upload failed");
+
+      setSuccessMessage("Profile picture updated successfully");
+      setOpen(false);
+      fetchProfile(); // Refresh profile
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Update Profile Function
   const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -154,6 +201,27 @@ export default function ProfilePage() {
               <p className="text-sm text-gray-500">{profile.email}</p>
             </div>
           </div>
+          <div className="flex items-center space-x-4 mb-4"> 
+
+          <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <div className="flex items-center space-x-2 mb-5">
+                <Button variant="outline">Change Profile Picture</Button>
+                </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Update Profile Picture</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleUpload} className="space-y-4">
+                  <Input type="file" accept="image/*" onChange={handleFileChange} />
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Uploading..." : "Upload"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+            </div>
 
           <Label htmlFor="username">Username</Label>
           <Input id="username" name="username" type="text" defaultValue={profile.username} required />

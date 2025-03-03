@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -52,6 +53,11 @@ const menuItems = [
   },
 ]
 
+  // Handle Sign Out
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
 export function Sidebar() {
   const pathname = usePathname()
 
@@ -82,7 +88,7 @@ export function Sidebar() {
         })}
       </nav>
       <div className="p-4 mt-auto">
-        <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors">
+        <button onClick={handleSignOut} className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors">
           <LogOut className="w-4 h-4" />
           Logout
         </button>

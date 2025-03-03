@@ -33,29 +33,39 @@ export function LoginButton() {
     e.preventDefault();
     setErrorMessage(null);
     setLoading(true);
-
+  
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-
+  
     try {
       const result = await signIn("credentials", {
         redirect: false,
         email,
         password,
       });
-
+  
       if (result?.error) throw new Error(result.error);
-
+  
       setSuccessMessage("Login successful!");
       setOpen(false);
-      router.refresh(); // Refresh to update session state
+      
+      // Fetch user session data
+      const session = await fetch("/api/auth/session").then((res) => res.json());
+  
+      // Redirect based on role
+      if (session?.user?.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Login failed");
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Handle Signup
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -98,43 +108,43 @@ export function LoginButton() {
     }
   };
 
-    // Handle OTP Request
-    const handleSendOtp = async (email: string) => {
-      setErrorMessage(null);
-      setSuccessMessage(null);
-      setLoading(true);
-  
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-  
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Failed to send OTP");
-  
-        setOtpSent(true);
-        setSuccessMessage("OTP sent successfully. Check your email.");
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          setErrorMessage(error.message);
-        } else {
-          setErrorMessage("An unknown error occurred");
-        }
-      } finally {
-        setLoading(false);
+  // Handle OTP Request
+  const handleSendOtp = async (email: string) => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to send OTP");
+
+      setOtpSent(true);
+      setSuccessMessage("OTP sent successfully. Check your email.");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("An unknown error occurred");
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-useEffect(() => {
-  if (status === "authenticated" && !session?.user?.authToken) {
-    update();
-  }
-}, [session, status, update]);
+  useEffect(() => {
+    if (status === "authenticated" && !session?.user?.authToken) {
+      update();
+    }
+  }, [session, status, update]);
 
-console.log("Session:", session?.user?.authToken);
-console.log("Status:", status);
+  console.log("Session:", session?.user?.authToken);
+  console.log("Status:", status);
 
   // Handle Sign Out
   const handleSignOut = async () => {
@@ -172,8 +182,8 @@ console.log("Status:", status);
               </form>
             </TabsContent>
 
-{/* SIGNUP FORM */}
-<TabsContent value="signup">
+            {/* SIGNUP FORM */}
+            <TabsContent value="signup">
               <div className="max-h-[80vh] overflow-y-auto p-4">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <InputField id="signup-username" name="username" label="Username" type="text" />
@@ -191,30 +201,32 @@ console.log("Status:", status);
                   <InputField id="signup-confirm-password" name="confirm_password" label="Confirm Password" type="password" />
 
                   <div className="flex flex-col">
-  <label htmlFor="signup-gender">Gender</label>
-  <select
-    id="signup-gender"
-    name="gender"
-    className="border rounded p-2 text-black"
-  >
-    <option value="">Select Gender</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-    <option value="Other">Other</option>
-  </select>
-</div>
+                    <label htmlFor="signup-gender">Gender</label>
+                    <select
+                      id="signup-gender"
+                      name="gender"
+                      className="border rounded p-2 text-black"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
 
-<div className="flex flex-col">
-  <label htmlFor="signup-role">Role</label>
-  <select
-    id="signup-role"
-    name="role"
-    className="border rounded p-2 text-black"
-  >
-    <option value="User">User</option>
-    <option value="Admin">Admin</option>
-  </select>
-</div>
+                  <div className="hidden">
+                    <label htmlFor="signup-role">Role</label>
+                    <select
+                      id="signup-role"
+                      name="role"
+                      className="border rounded p-2 text-black"
+                      defaultValue="User"
+                    >
+                      <option value="User">User</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </div>
+
 
                   <SubmitButton loading={loading}>Sign Up</SubmitButton>
                 </form>

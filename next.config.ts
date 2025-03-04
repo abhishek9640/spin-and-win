@@ -8,8 +8,13 @@ const nextConfig: NextConfig = {
         hostname: "api.dicebear.com",
         pathname: "/5.x/initials/svg",
       },
+      {
+        protocol: "https",
+        hostname: "spinwin.shreyanshkataria.com",
+        pathname: "/image/**",
+      },
     ],
-    domains: ["api.dicebear.com"], // Ensure this is present
+    domains: ["api.dicebear.com", "spinwin.shreyanshkataria.com"], 
     dangerouslyAllowSVG: true,
   },
 };

@@ -180,62 +180,174 @@ export default function ProfilePage() {
     }
   };
 
+    // Change Password Handler
+    const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setLoading(true);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+  
+      const formData = new FormData(e.currentTarget);
+      const passwordData = {
+        old_password: formData.get("old_password"),
+        new_password: formData.get("new_password"),
+        confirm_password: formData.get("confirm_password"),
+      };
+  
+      try {
+        if (!session?.user?.authToken) throw new Error("Authentication token not found. Please log in.");
+  
+        const response = await fetch(`${API_BASE_URL}/api/v1/user/change-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `${session.user.authToken}` },
+          body: JSON.stringify(passwordData),
+        });
+  
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Password change failed");
+  
+        setSuccessMessage("Password updated successfully");
+        setPasswordOpen(false);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
   if (status === "loading") return <p>Loading session...</p>;
   if (!session) return <p>Please log in to view your profile.</p>;
-
   return (
-    <div className="min-h-screen bg-background text-foreground">
-          <Header />
-    <div className="container py-8 max-w-lg mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Profile</h2>
-
-      {errorMessage && <Alert variant="destructive"><AlertDescription>{errorMessage}</AlertDescription></Alert>}
-      {successMessage && <Alert variant="default"><AlertDescription>{successMessage}</AlertDescription></Alert>}
-
-      {profile ? (
-        <form onSubmit={handleProfileUpdate} className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <Image src={profile?.profile_pic?.Location || "/default-avatar.png"} alt="Profile" width={64} height={64} className="rounded-full border" />
-            <div>
-              <p className="text-lg font-medium">{profile.username}</p>
-              <p className="text-sm text-gray-500">{profile.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 mb-4"> 
-
-          <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <div className="flex items-center space-x-2 mb-5">
-                <Button variant="outline">Change Profile Picture</Button>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <Header />
+      <div className="container py-10 max-w-2xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
+          <h2 className="text-3xl font-bold text-center mb-6">Profile</h2>
+  
+          {errorMessage && (
+            <Alert variant="destructive">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
+          {successMessage && (
+            <Alert variant="default">
+              <AlertDescription>{successMessage}</AlertDescription>
+            </Alert>
+          )}
+  
+          {profile ? (
+            <form onSubmit={handleProfileUpdate} className="space-y-6">
+              {/* Profile Picture & Info */}
+              <div className="flex items-center space-x-6">
+                <Image
+                  src={profile?.profile_pic?.Location || "/default-avatar.png"}
+                  alt="Profile"
+                  width={80}
+                  height={80}
+                  className="rounded-full border-2 border-gray-300 dark:border-gray-600 shadow-lg"
+                />
+                <div>
+                  <p className="text-xl font-semibold">{profile.username}</p>
+                  <p className="text-gray-500 dark:text-gray-400">{profile.email}</p>
                 </div>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Update Profile Picture</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleUpload} className="space-y-4">
-                  <Input type="file" accept="image/*" onChange={handleFileChange} />
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Uploading..." : "Upload"}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            </div>
-
-          <Label htmlFor="username">Username</Label>
-          <Input id="username" name="username" type="text" defaultValue={profile.username} required />
-
-          <Label htmlFor="phone_number">Phone Number</Label>
-          <Input id="phone_number" name="phone_number" type="tel" defaultValue={profile.phone_number} required />
-
-          <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Profile"}</Button>
-        </form>
-      ) : (
-        <p className="text-center">Fetching profile data...</p>
-      )}
-    </div>
+              </div>
+  
+              {/* Buttons for Actions */}
+              <div className="flex justify-between">
+                {/* Change Profile Picture */}
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-1/2">
+                      Change Picture
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Update Profile Picture</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleUpload} className="space-y-4">
+                      <Input type="file" accept="image/*" onChange={handleFileChange} />
+                      <Button type="submit" disabled={loading}>
+                        {loading ? "Uploading..." : "Upload"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+  
+                {/* Change Password */}
+                <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-1/2">
+                      Change Password
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Change Password</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleChangePassword} className="space-y-4">
+                      <Label htmlFor="old_password">Old Password</Label>
+                      <Input id="old_password" name="old_password" type="password" required />
+  
+                      <Label htmlFor="new_password">New Password</Label>
+                      <Input id="new_password" name="new_password" type="password" required />
+  
+                      <Label htmlFor="confirm_password">Confirm Password</Label>
+                      <Input id="confirm_password" name="confirm_password" type="password" required />
+  
+                      <Button type="submit" disabled={loading} className="w-full">
+                        {loading ? "Updating..." : "Update Password"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+  
+              {/* Profile Fields */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    name="username"
+                    type="text"
+                    defaultValue={profile.username}
+                    required
+                    className="border-gray-300 focus:border-gray-500 dark:focus:border-gray-400"
+                  />
+                </div>
+  
+                <div>
+                  <Label htmlFor="phone_number">Phone Number</Label>
+                  <Input
+                    id="phone_number"
+                    name="phone_number"
+                    type="tel"
+                    defaultValue={profile.phone_number}
+                    required
+                    className="border-gray-300 focus:border-gray-500 dark:focus:border-gray-400"
+                  />
+                </div>
+              </div>
+  
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md shadow-md"
+              >
+                {loading ? "Updating..." : "Update Profile"}
+              </Button>
+            </form>
+          ) : (
+            <p className="text-center text-gray-500 dark:text-gray-400">Fetching profile data...</p>
+          )}
+        </div>
+      </div>
     </div>
   );
+  
 }
 

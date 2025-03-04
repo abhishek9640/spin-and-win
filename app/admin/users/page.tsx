@@ -1,7 +1,16 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // Users Type
 interface Users {
@@ -17,67 +26,87 @@ interface Users {
   is_email_verified: boolean;
 }
 
-
-// Extend NextAuth Session to include authToken
-declare module "next-auth" {
-  interface Session {
-    user: {
-      authToken?: string;
-    };
-  }
-}
-
 export default function UsersPage() {
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<Users[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<Users | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
-  
-    console.log("🔹 Fetching users data...");
-    console.log("🔹 Session Data:", session);
-    console.log("🔹 Auth Token:", session?.user?.authToken);
-  
+
     try {
       if (!session?.user?.authToken) {
         throw new Error("Authentication token not found. Please log in.");
       }
-  
+
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/list`, {
         method: "GET",
         headers: {
           Authorization: `${session?.user?.authToken}`,
         },
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to fetch users data. Please try again.");
       }
-      
+
       const data = await response.json();
-      console.log("🔹 Users Data:", data.data);
       setUsers(data.data.list);
     } catch (error) {
       console.error("🔴 Fetch Users Error:", error);
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("An unknown error occurred.");
-      }
+      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setLoading(false);
     }
   }, [API_BASE_URL, session]);
 
-  // Fetch user profile when session is available
+  // Update User Status
+  const setStatus = useCallback(async () => {
+    if (!selectedUser) return;
+    setLoading(true);
+    setIsModalOpen(false);
+
+    try {
+      if (!session?.user?.authToken) {
+        throw new Error("Authentication token not found. Please log in.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/set-status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `${session?.user?.authToken}`,
+        },
+        body: JSON.stringify({ status: !selectedUser.is_active, user_id: selectedUser._id }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to update status");
+
+      // Update users state after status change
+      setUsers((prevUsers) =>
+        prevUsers
+          ? prevUsers.map((user) =>
+              user._id === selectedUser._id ? { ...user, is_active: !user.is_active } : user
+            )
+          : []
+      );
+    } catch (error) {
+      console.error("🔴 Status Update Error:", error);
+      setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+    }
+  }, [API_BASE_URL, session, selectedUser]);
+
   useEffect(() => {
-    console.log("Session:", session);
-    console.log("Status:", status);
     if (session?.user?.authToken && status === "authenticated") {
       fetchUsers();
     }
@@ -97,9 +126,8 @@ export default function UsersPage() {
               <th className="border p-2 text-black">Username</th>
               <th className="border p-2 text-black">Email</th>
               <th className="border p-2 text-black">Phone</th>
-              {/* <th className="border p-2 text-black">Role</th> */}
               <th className="border p-2 text-black">Status</th>
-              {/* <th className="border p-2 text-black">Action</th> */}
+              <th className="border p-2 text-black">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -115,7 +143,40 @@ export default function UsersPage() {
                     <span className="text-red-600 font-semibold">Inactive</span>
                   )}
                 </td>
-                
+                <td className="border p-2">
+                  <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className={`px-3 py-1 rounded text-white ${
+                          user.is_active ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
+                        }`}
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setIsModalOpen(true);
+                        }}
+                        disabled={loading}
+                      >
+                        {user.is_active ? "Deactivate" : "Activate"}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Confirm Action</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to {user.is_active ? "deactivate" : "activate"} this user?
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={setStatus} disabled={loading}>
+                          {loading ? "Processing..." : "Confirm"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </td>
               </tr>
             ))}
           </tbody>

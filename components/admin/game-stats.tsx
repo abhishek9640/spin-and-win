@@ -5,10 +5,10 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recha
 
 const data = [
   { name: "Spin & Win", players: 400, revenue: 2400 },
-  { name: "Lottery", players: 300, revenue: 1398 },
-  { name: "Slots", players: 200, revenue: 9800 },
-  { name: "Poker", players: 278, revenue: 3908 },
-  { name: "Blackjack", players: 189, revenue: 4800 },
+  // { name: "Lottery", players: 300, revenue: 1398 },
+  // { name: "Slots", players: 200, revenue: 9800 },
+  // { name: "Poker", players: 278, revenue: 3908 },
+  // { name: "Blackjack", players: 189, revenue: 4800 },
 ]
 
 export function GameStats() {

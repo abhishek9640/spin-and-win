@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google"
 import "./globals.css"
 import SessionProviderWrapper from "@/components/sessionProvider"
+import { Web3Provider } from "@/components/web3/web3-provider"
 import type React from "react"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -20,7 +21,9 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         {/* Wrap the entire app with both providers */}
         <SessionProviderWrapper>
-          {children}
+          <Web3Provider>
+            {children}
+          </Web3Provider>
         </SessionProviderWrapper>
       </body>
     </html>

@@ -5,6 +5,7 @@ import { Sparkles, User } from "lucide-react"
 import { LoginButton } from "./auth-dialog"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { ConnectWallet } from "./web3/connect-wallet"
 
 export function Header() {
   const pathname = usePathname()
@@ -40,6 +41,7 @@ export function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <ConnectWallet />
           <LoginButton />
           {session && (
             <Link href="/profile">

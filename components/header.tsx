@@ -41,7 +41,7 @@ export function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <ConnectWallet />
+          {session && <ConnectWallet />}
           <LoginButton />
           {session && (
             <Link href="/profile">

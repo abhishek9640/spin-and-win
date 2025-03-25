@@ -6,65 +6,122 @@ import { NumberSelector } from "@/components/game/number-selector"
 import { BettingPanel } from "@/components/game/betting-panel"
 import { ResultDisplay } from "@/components/game/result-display"
 import { WinnerModal } from "@/components/game/winner-modal"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
-export type GameResult = {
-  winningNumber: number
-  selectedNumber: number
-  amount: number
-  timestamp: number
+// Define interfaces
+interface GameItem {
+  name: string;
+  odds: number;
+  _id: string;
 }
 
-export function SpinGameUI() {
-  const [selectedNumber, setSelectedNumber] = useState<number | null>(null)
-  const [betAmount, setBetAmount] = useState(10)
-  const [isSpinning, setIsSpinning] = useState(false)
-  const [winningNumber, setWinningNumber] = useState<number | null>(null)
-  const [showResult, setShowResult] = useState(false)
-  const [showWinnerModal, setShowWinnerModal] = useState(false)
-  const [gameResults, setGameResults] = useState<GameResult[]>([])
+interface SpinGameProps {
+  gameId: string;
+  gameItems?: GameItem[];
+  minBet?: number;
+  maxBet?: number;
+}
 
-  const handleNumberSelect = (number: number) => {
+// Game states
+type GameState = 'idle' | 'spinning' | 'result' | 'won' | 'lost'
+
+export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 }: SpinGameProps) {
+  // Game state
+  const [gameState, setGameState] = useState<GameState>('idle')
+  const [selectedNumber, setSelectedNumber] = useState<string>('')
+  const [betAmount, setBetAmount] = useState<number>(minBet)
+  const [spinResult, setSpinResult] = useState<string>('')
+  const [winAmount, setWinAmount] = useState<number>(0)
+  const [showWinnerModal, setShowWinnerModal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Prepare game items for display - ensure we have valid data
+  const validGameItems = gameItems && gameItems.length > 0 
+    ? gameItems 
+    : Array.from({ length: 10 }, (_, i) => ({ 
+        name: String(i + 1), 
+        odds: 1, 
+        _id: String(i) 
+      }));
+
+  // Get all possible numbers/options from game items
+  const possibleNumbers = validGameItems.map(item => item.name);
+
+  // Handle bet amount change
+  const handleBetChange = (amount: number) => {
+    if (amount < minBet) {
+      setBetAmount(minBet)
+    } else if (amount > maxBet) {
+      setBetAmount(maxBet)
+    } else {
+      setBetAmount(amount)
+    }
+  }
+
+  // Handle number selection
+  const handleNumberSelect = (number: string) => {
     setSelectedNumber(number)
   }
 
-  const handleBetChange = (amount: number) => {
-    setBetAmount(amount)
-  }
-
+  // Handle spin
   const handleSpin = () => {
-    if (selectedNumber === null) return
+    if (!selectedNumber) {
+      setError('Please select a number first')
+      return
+    }
+    
+    if (betAmount < minBet) {
+      setError(`Minimum bet amount is ${minBet} ETH`)
+      return
+    }
 
-    setIsSpinning(true)
-    setShowResult(false)
-    setWinningNumber(null)
-
-    // Simulate spin duration
+    // Clear any previous errors
+    setError(null)
+    
+    // Start spinning
+    setGameState('spinning')
+    
+    // Simulate a spin result (this would be replaced with actual blockchain interaction)
     setTimeout(() => {
-      // Generate random winning number between 1 and 9
-      const result = Math.floor(Math.random() * 9) + 1
-      setWinningNumber(result)
-
-      // Record game result
-      const gameResult: GameResult = {
-        winningNumber: result,
-        selectedNumber: selectedNumber,
-        amount: betAmount,
-        timestamp: Date.now(),
-      }
-
-      setGameResults((prev) => [gameResult, ...prev])
-      setIsSpinning(false)
-      setShowResult(true)
-
-      // Check if player won
-      if (result === selectedNumber) {
+      // Randomly select one of the possible numbers as the result
+      const result = possibleNumbers[Math.floor(Math.random() * possibleNumbers.length)]
+      setSpinResult(result)
+      
+      // Determine if player won
+      const isWinner = result === selectedNumber
+      
+      // Set game state
+      setGameState(isWinner ? 'won' : 'lost')
+      
+      // Calculate winnings based on odds if won
+      if (isWinner) {
+        const selectedItem = validGameItems.find(item => item.name === selectedNumber)
+        const odds = selectedItem ? selectedItem.odds : 1
+        const winnings = betAmount * odds
+        setWinAmount(winnings)
+        
+        // Show winner modal after a delay
         setTimeout(() => {
           setShowWinnerModal(true)
-        }, 1500)
+        }, 500)
       }
-    }, 5000) // 5 seconds spin time
+    }, 2000) // Spin for 2 seconds
+  }
+
+  // Handle reset/play again
+  const handlePlayAgain = () => {
+    setGameState('idle')
+    setSpinResult('')
+    setWinAmount(0)
+    setShowWinnerModal(false)
+  }
+
+  // Close winner modal
+  const closeWinnerModal = () => {
+    setShowWinnerModal(false)
   }
 
   return (
@@ -78,89 +135,69 @@ export function SpinGameUI() {
         Spin & Win
       </motion.h1>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
-        <div className="space-y-8">
-          <Card className="p-6 bg-gray-800/50 border-gray-700">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-2xl opacity-25 animate-pulse" />
-              <NumberSpinner isSpinning={isSpinning} winningNumber={winningNumber} />
-            </div>
-          </Card>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="p-6 bg-gray-800/50 border-gray-700">
-              <h2 className="text-2xl font-semibold mb-4">Select Your Lucky Number</h2>
-              <NumberSelector
-                selectedNumber={selectedNumber}
-                onSelectNumber={handleNumberSelect}
-                disabled={isSpinning}
-              />
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <BettingPanel
-              betAmount={betAmount}
-              onBetChange={handleBetChange}
-              onSpin={handleSpin}
-              disabled={isSpinning || selectedNumber === null}
-            />
-          </motion.div>
-        </div>
-
-        <div className="space-y-4">
-          <Card className="p-4 bg-gray-800/50 border-gray-700">
-            <h2 className="text-xl font-semibold mb-4">Game History</h2>
-            {gameResults.length === 0 ? (
-              <p className="text-center text-gray-400 py-4">No games played yet</p>
-            ) : (
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {gameResults.map((result, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-700/50">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">
-                        Bet: ${result.amount} on #{result.selectedNumber}
-                      </p>
-                      <p className="text-xs text-gray-400">{new Date(result.timestamp).toLocaleTimeString()}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">Result:</span>
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                          result.winningNumber === result.selectedNumber
-                            ? "bg-green-500 text-white"
-                            : "bg-gray-600 text-white"
-                        }`}
-                      >
-                        {result.winningNumber}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+        <div>
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="py-8 px-6">
+                <NumberSpinner 
+                  spinning={gameState === 'spinning'} 
+                  result={spinResult}
+                  possibleNumbers={possibleNumbers}
+                />
+                
+                {/* Error Alert */}
+                {error && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                
+                {/* Result Display */}
+                {(gameState === 'won' || gameState === 'lost') && (
+                  <ResultDisplay 
+                    won={gameState === 'won'} 
+                    amount={gameState === 'won' ? winAmount : betAmount}
+                    selectedNumber={selectedNumber}
+                    resultNumber={spinResult}
+                    onPlayAgain={handlePlayAgain}
+                  />
+                )}
               </div>
-            )}
+            </CardContent>
           </Card>
+        </div>
+        
+        <div className="space-y-6">
+          {/* Betting Panel */}
+          <BettingPanel 
+            minBet={minBet}
+            maxBet={maxBet}
+            betAmount={betAmount}
+            onBetChange={handleBetChange}
+            onSpin={handleSpin}
+            disabled={gameState === 'spinning' || gameState === 'won' || gameState === 'lost'}
+          />
+          
+          {/* Number Selector */}
+          <NumberSelector 
+            numbers={possibleNumbers}
+            selectedNumber={selectedNumber}
+            onSelectNumber={handleNumberSelect}
+            disabled={gameState === 'spinning' || gameState === 'won' || gameState === 'lost'}
+          />
         </div>
       </div>
 
-      {showResult && (
-        <ResultDisplay winningNumber={winningNumber!} selectedNumber={selectedNumber!} betAmount={betAmount} />
+      {/* Winner Modal */}
+      {showWinnerModal && (
+        <WinnerModal 
+          winAmount={winAmount}
+          onClose={closeWinnerModal}
+          onPlayAgain={handlePlayAgain}
+        />
       )}
-
-      <WinnerModal
-        isOpen={showWinnerModal}
-        onClose={() => setShowWinnerModal(false)}
-        betAmount={betAmount}
-        selectedNumber={selectedNumber!}
-      />
     </div>
   )
 }

@@ -3,13 +3,13 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Coins, Zap, Shield, Sparkles } from 'lucide-react'
-import { WalletAddressSync } from "@/components/WalletAddressSync"
+// import { WalletAddressSync } from "@/components/WalletAddressSync"
 import Link from 'next/link'
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <WalletAddressSync />
+      {/* <WalletAddressSync /> */}
       
       <Header />
 

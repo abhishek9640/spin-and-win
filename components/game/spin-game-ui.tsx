@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/components/ui/use-toast"
 
 // Define interfaces
 interface GameItem {
@@ -26,9 +28,12 @@ interface SpinGameProps {
 }
 
 // Game states
-type GameState = 'idle' | 'spinning' | 'result' | 'won' | 'lost'
+type GameState = 'idle' | 'betting' | 'spinning' | 'result' | 'won' | 'lost'
 
 export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 }: SpinGameProps) {
+  const { data: session } = useSession();
+  const { toast } = useToast();
+  
   // Game state
   const [gameState, setGameState] = useState<GameState>('idle')
   const [selectedNumber, setSelectedNumber] = useState<string>('')
@@ -37,6 +42,7 @@ export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 
   const [winAmount, setWinAmount] = useState<number>(0)
   const [showWinnerModal, setShowWinnerModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Prepare game items for display - ensure we have valid data
   const validGameItems = gameItems && gameItems.length > 0 
@@ -66,8 +72,8 @@ export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 
     setSelectedNumber(number)
   }
 
-  // Handle spin
-  const handleSpin = () => {
+  // Handle bet creation
+  const handleBetCreation = async () => {
     if (!selectedNumber) {
       setError('Please select a number first')
       return
@@ -78,12 +84,73 @@ export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 
       return
     }
 
-    // Clear any previous errors
-    setError(null)
-    
-    // Start spinning
-    setGameState('spinning')
-    
+    if (!session?.user?.authToken) {
+      setError('Please sign in to place a bet')
+      return
+    }
+
+    try {
+      setIsProcessing(true);
+      setError(null);
+
+      // Find the selected game item
+      const selectedItem = validGameItems.find(item => item.name === selectedNumber);
+      if (!selectedItem) {
+        throw new Error('Invalid number selected');
+      }
+
+      // Call the bet API with the correct structure
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/user/bet`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `${session.user.authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          game_id: gameId,
+          amount: Number(betAmount.toFixed(2)), // Ensure 2 decimal places
+          item: {
+            name: selectedNumber,
+            odds: selectedItem.odds,
+            _id: selectedItem._id
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to place bet: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // If bet is successful, start the game
+      if (data.success) {
+        toast({
+          title: "Bet Placed Successfully",
+          description: "Your bet has been placed. Starting the game...",
+        });
+        setGameState('spinning');
+        // Start the game logic
+        startGame(data.transactionHash);
+      } else {
+        throw new Error(data.message || 'Failed to place bet');
+      }
+    } catch (err) {
+      console.error('Error placing bet:', err);
+      setError(err instanceof Error ? err.message : 'Failed to place bet');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to place bet',
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle game start after successful bet
+  const startGame = (transactionHash: string) => {
     // Simulate a spin result (this would be replaced with actual blockchain interaction)
     setTimeout(() => {
       // Randomly select one of the possible numbers as the result
@@ -176,8 +243,9 @@ export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 
             maxBet={maxBet}
             betAmount={betAmount}
             onBetChange={handleBetChange}
-            onSpin={handleSpin}
+            onSpin={handleBetCreation}
             disabled={gameState === 'spinning' || gameState === 'won' || gameState === 'lost'}
+            isProcessing={isProcessing}
           />
           
           {/* Number Selector */}
@@ -185,7 +253,7 @@ export function SpinGameUI({ gameId, gameItems = [], minBet = 0.001, maxBet = 1 
             numbers={possibleNumbers}
             selectedNumber={selectedNumber}
             onSelectNumber={handleNumberSelect}
-            disabled={gameState === 'spinning' || gameState === 'won' || gameState === 'lost'}
+            disabled={gameState === 'spinning' || gameState === 'won' || gameState === 'lost' || isProcessing}
           />
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 
 // Define interface for session user with role
 interface SessionUser {
+  id?: string;
   authToken?: string;
   role?: string;
   name?: string;
@@ -37,7 +38,7 @@ export const WalletAddressSync = () => {
   const syncAttempted = useRef(false);
   const currentAddress = useRef<string | undefined>(undefined);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://spinwin.shreyanshkataria.com";
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const syncWalletAddress = async () => {
     if (isLoading || isSynced || !isConnected || !address || status !== "authenticated") return false;
@@ -47,9 +48,10 @@ export const WalletAddressSync = () => {
       return false;
     }
 
-    // Get user role from session
-    const userRole = session.user.role || 'user';
-    console.log(`Current user role: ${userRole}`);
+    if (!session?.user?.email) {
+      console.error("User Email is missing in session. Skipping sync.");
+      return false;
+    }
 
     if (currentAddress.current === address) return false;
 
@@ -65,15 +67,12 @@ export const WalletAddressSync = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `${session.user.authToken}`,
-          // Add role to headers to help API identify user type
-          "X-User-Role": userRole
+          "x-user": JSON.stringify({
+            id: session.user.id, // Correct key name
+          }),
+          Authorization: `${session.user.authToken}`, // Ensure proper format
         },
-        body: JSON.stringify({ 
-          crypto_address: address,
-          // Include role in the request body as well
-          role: userRole 
-        }),
+        body: JSON.stringify({ crypto_address: address }),
       });
 
       let data;
@@ -117,15 +116,6 @@ export const WalletAddressSync = () => {
     if (syncError) console.error("Wallet sync error:", syncError);
   }, [syncError]);
 
-  // For debugging purposes, you can uncomment this to show role info in the UI
-  // return (
-  //   <div style={{ display: 'none' }}>
-  //     Role: {session?.user?.role || 'unknown'}, 
-  //     Address: {address || 'not connected'}, 
-  //     Synced: {isSynced ? 'yes' : 'no'}
-  //   </div>
-  // );
-  
   return null;
 };
 

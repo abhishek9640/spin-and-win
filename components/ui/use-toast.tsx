@@ -23,7 +23,7 @@ export function useToast() {
       
       // Remove after duration
       setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id))
+        setToasts((prev) => prev.filter((t) => t !== id))
       }, duration)
       
       // Log toast for development

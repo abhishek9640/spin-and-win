@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useAccount } from 'wagmi'
 import { Header } from '@/components/header'
-import { SpinGameUI } from '@/components/game/spin-game-ui'
+// import { SpinGameUI } from '@/components/game/spin-game-ui'
 import { Button } from '@/components/ui/button'
 // import { WalletAddressSync } from '@/components/WalletAddressSync'
 import { Loader2, ArrowLeft } from 'lucide-react'
@@ -111,6 +111,7 @@ export default function GamePage() {
     };
 
     fetchGameDetails();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, sessionStatus, session?.user?.authToken, router]);
 
   // Guards and loading states
@@ -194,12 +195,12 @@ export default function GamePage() {
         </div>
         
         {/* Pass game info to the SpinGameUI component */}
-        <SpinGameUI 
+        {/* <SpinGameUI 
           gameId={game._id} 
           gameItems={game.items || []} 
           minBet={game.minBet} 
           maxBet={game.maxBet} 
-        />
+        /> */}
       </div>
     </div>
   );

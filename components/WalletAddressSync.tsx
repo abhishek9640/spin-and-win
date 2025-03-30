@@ -110,6 +110,7 @@ export const WalletAddressSync = () => {
       setIsSynced(false);
       syncAttempted.current = false;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, address, status, session?.user?.authToken]);
 
   useEffect(() => {

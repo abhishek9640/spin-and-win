@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Coins } from 'lucide-react'
 import { WalletAddressSync } from '@/components/WalletAddressSync'
+import Image from 'next/image'
 import Link from 'next/link'
 
 // Define interfaces for the API response
@@ -93,6 +94,7 @@ export default function PlayPage() {
     if (sessionStatus === 'authenticated') {
       fetchGames();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session?.user?.authToken]);
 
   return (
@@ -148,9 +150,11 @@ export default function PlayPage() {
               <Card key={game._id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 {game.imageUrl && (
                   <div className="aspect-video w-full overflow-hidden">
-                    <img 
+                    <Image 
                       src={game.imageUrl} 
                       alt={game.name || 'Game'} 
+                      width={400}
+                      height={225}
                       className="w-full h-full object-cover transition-transform hover:scale-105" 
                     />
                   </div>

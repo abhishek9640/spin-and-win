@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useAccount } from 'wagmi'
 import { Header } from '@/components/header'
-// import { SpinGameUI } from '@/components/game/spin-game-ui'
 import { Button } from '@/components/ui/button'
-// import { WalletAddressSync } from '@/components/WalletAddressSync'
 import { Loader2, ArrowLeft } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { toast } from 'sonner'
 import Link from 'next/link'
 
 // Define interfaces for the API response
@@ -41,6 +43,9 @@ export default function GamePage() {
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<GameItem | null>(null);
+  const [betAmount, setBetAmount] = useState<string>('');
+  const [isPlacingBet, setIsPlacingBet] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://spinwin.shreyanshkataria.com';
 
@@ -95,12 +100,15 @@ export default function GamePage() {
         const responseData = await response.json();
         console.log('Game details response:', responseData);
         
-        if (responseData.data) {
-          setGame(responseData.data);
-          console.log('Game details loaded:', responseData.data);
+        // Check if we have data and records array
+        if (responseData.data?.records && responseData.data.records.length > 0) {
+          // Access the first record from the records array
+          const gameData = responseData.data.records[0];
+          console.log('Game details loaded:', gameData);
+          setGame(gameData);
         } else {
-          console.error('Unexpected API response structure:', responseData);
-          setError(responseData.message || 'Failed to fetch game details');
+          console.error('No game records found in response:', responseData);
+          setError('Game not found or no data available');
         }
       } catch (err) {
         console.error('Error fetching game:', err);
@@ -113,6 +121,102 @@ export default function GamePage() {
     fetchGameDetails();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, sessionStatus, session?.user?.authToken, router]);
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow only valid number format with up to 2 decimal places
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      setBetAmount(value);
+    }
+  };
+
+  const handlePlaceBet = async () => {
+    if (!game || !selectedItem || !betAmount || !session?.user?.authToken) {
+      toast('Please select an item and enter a valid amount');
+      return;
+    }
+
+    const amount = parseFloat(betAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast('Please enter a valid amount');
+      return;
+    }
+
+    if (game.minBet && amount < game.minBet) {
+      toast(`Minimum bet amount is ${game.minBet}`);
+      return;
+    }
+
+    if (game.maxBet && amount > game.maxBet) {
+      toast(`Maximum bet amount is ${game.maxBet}`);
+      return;
+    }
+
+    setIsPlacingBet(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/user/bet`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `${session.user.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          game_id: game._id,
+          amount: amount.toFixed(2), // Ensure 2 decimal places
+          item: selectedItem
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to place bet');
+      }
+
+      const data = await response.json();
+      console.log('Bet response:', data);
+      
+      if (data.success && data.trans_id) {
+        // First show success message with transaction ID
+        toast.success(`Bet placed successfully! Transaction ID: ${data.trans_id}`);
+        console.log('Transaction ID:', data.trans_id);
+
+        // Make API call to set transaction as done
+        try {
+          const setTransResponse = await fetch(`${API_BASE_URL}/api/v1/user/set-trans-done`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `${session.user.authToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              trans_id: data.trans_id
+            })
+          });
+
+          if (!setTransResponse.ok) {
+            console.error('Failed to set transaction as done');
+            return;
+          }
+
+          const setTransData = await setTransResponse.json();
+          console.log('Transaction status updated:', setTransData);
+        } catch (err) {
+          console.error('Error setting transaction as done:', err);
+        }
+      } else {
+        toast.success('Bet placed successfully!');
+      }
+      
+      // Reset form
+      setBetAmount('');
+      setSelectedItem(null);
+    } catch (err) {
+      console.error('Error placing bet:', err);
+      toast(err instanceof Error ? err.message : 'Failed to place bet');
+    } finally {
+      setIsPlacingBet(false);
+    }
+  };
 
   // Guards and loading states
   if (sessionStatus === 'loading' || loading) {
@@ -170,7 +274,6 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* <WalletAddressSync /> */}
       <Header />
       
       <div className="container mx-auto px-4 py-6">
@@ -194,13 +297,67 @@ export default function GamePage() {
           </div>
         </div>
         
-        {/* Pass game info to the SpinGameUI component */}
-        {/* <SpinGameUI 
-          gameId={game._id} 
-          gameItems={game.items || []} 
-          minBet={game.minBet} 
-          maxBet={game.maxBet} 
-        /> */}
+        <Card className="max-w-2xl mx-auto">
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Bet Amount</Label>
+                <Input
+                  id="amount"
+                  type="text"
+                  value={betAmount}
+                  onChange={handleAmountChange}
+                  placeholder={`Enter amount (${game.minBet || '0.01'} - ${game.maxBet || 'unlimited'})`}
+                  className="w-full"
+                />
+                {game.minBet && game.maxBet && (
+                  <p className="text-sm text-muted-foreground">
+                    Min: {game.minBet} | Max: {game.maxBet}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Select Item</Label>
+                <p className="text-sm text-muted-foreground">
+                  Available items: {(game.items || []).length} | 
+                  Selected: {selectedItem ? `${selectedItem.name} (odds: ${selectedItem.odds})` : 'None'}
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {(game.items || []).map((item) => (
+                    <Button
+                      key={item._id}
+                      variant={selectedItem?._id === item._id ? "default" : "outline"}
+                      onClick={() => {
+                        console.log('Item selected:', item);
+                        setSelectedItem(item);
+                      }}
+                      className="w-full"
+                      disabled={isPlacingBet}
+                    >
+                      {item.name} (x{item.odds})
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                className="w-full"
+                onClick={handlePlaceBet}
+                disabled={isPlacingBet || !selectedItem || !betAmount}
+              >
+                {isPlacingBet ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Placing Bet...
+                  </>
+                ) : (
+                  'Place Bet'
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

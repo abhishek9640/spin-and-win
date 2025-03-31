@@ -6,6 +6,15 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Loader2 } from "lucide-react"
 
 // Define interfaces for the API response
 interface GameItem {
@@ -45,10 +54,14 @@ export default function GamesPage() {
       router.push('/auth/signin?callbackUrl=/admin/games')
     },
   })
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://spinwin.shreyanshkataria.com';
   const [games, setGames] = useState<Game[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [winningItem, setWinningItem] = useState<GameItem | null>(null);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
   // Create a memoized fetchGames function that depends on the session
   const fetchGames = useCallback(async () => {
@@ -56,7 +69,6 @@ export default function GamesPage() {
       setIsLoading(true)
       setError(null)
       
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://spinwin.shreyanshkataria.com';
       const token = session?.user?.authToken
       
       // Log token status (without exposing the actual token)
@@ -72,7 +84,7 @@ export default function GamesPage() {
       }
 
       console.log('Fetching games for admin...');
-      const response = await fetch(`${API_BASE_URL}/api/v1/game/fetch-games`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/game-list?limit=10&page=1&status`, {
         headers: {
           "Authorization": `${token}`,
           "Content-Type": "application/json",
@@ -136,11 +148,55 @@ export default function GamesPage() {
     }
   }, [status, fetchGames]);
 
-  // Manual refresh handler
-  const handleRefresh = () => {
-    setRetryCount(0); // Reset retry count
-    fetchGames();
+  const handleSpinWheel = async (gameId: string) => {
+    if (!session?.user?.authToken) return;
+
+    setIsSpinning(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/spin-wheel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `${session.user.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          game_id: gameId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to spin the wheel');
+      }
+
+      const data = await response.json();
+      if (data.success && data.data?.winningItem) {
+        setWinningItem(data.data.winningItem);
+        toast({
+          title: "Success",
+          description: `Wheel spun successfully! Winning number: ${data.data.winningItem.name}`,
+        });
+        
+        // Refresh games list
+        fetchGames();
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to spin the wheel",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSpinning(false);
+    }
   };
+
+  // Manual refresh handler
+  // const handleRefresh = () => {
+  //   setRetryCount(0); // Reset retry count
+  //   fetchGames();
+  // };
 
   // If session is loading, show loading state
   if (status === "loading") {
@@ -157,9 +213,9 @@ export default function GamesPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Games Management</h1>
         <div className="space-x-2">
-          <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+          {/* <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
             {isLoading ? 'Refreshing...' : 'Refresh'}
-          </Button>
+          </Button> */}
           <Button onClick={() => router.push("/admin/games/create")}>Create New Game</Button>
         </div>
       </div>
@@ -170,9 +226,9 @@ export default function GamesPage() {
             <p className="font-bold">Error</p>
             <p>{error}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
+          {/* <Button variant="outline" size="sm" onClick={handleRefresh}>
             Try Again
-          </Button>
+          </Button> */}
         </div>
       )}
 
@@ -207,7 +263,7 @@ export default function GamesPage() {
   <div className="flex flex-wrap gap-2">
     {game.items && game.items.map((item, index) => (
       <span key={index} className="bg-gray-100 text-black px-2 py-1 rounded">
-        {item.name} (x{item.odds})
+        {item.name} 
       </span>
     ))}
   </div>
@@ -219,18 +275,90 @@ export default function GamesPage() {
               </div>
 
               <div className="flex justify-end space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => router.push(`/admin/games/${game._id}`)}
-                >
-                  View Details
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => router.push(`/admin/games/${game._id}/edit`)}
-                >
-                  Edit
-                </Button>
+                <Dialog open={!!selectedGame} onOpenChange={(open) => !open && setSelectedGame(null)}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedGame(game)}
+                    >
+                      Spin Wheel
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Spin the Wheel</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to spin the wheel for {selectedGame?.name || `Game ${selectedGame?._id.slice(-4)}`}?
+                        This will randomly select a winning number.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center space-y-4">
+                      {!winningItem ? (
+                        <div className="flex justify-end space-x-2 mt-4 w-full">
+                          <Button
+                            variant="outline"
+                            onClick={() => setSelectedGame(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={() => handleSpinWheel(selectedGame?._id || '')}
+                            disabled={isSpinning}
+                          >
+                            {isSpinning ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Spinning...
+                              </>
+                            ) : (
+                              'Spin Wheel'
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-full p-4 bg-green-50 rounded-lg text-center">
+                            <h3 className="text-xl font-bold text-green-700 mb-2">Winning Number!</h3>
+                            <div className="text-4xl font-bold text-green-800">
+                              {winningItem.name}
+                            </div>
+                            <p className="text-sm text-green-600 mt-1">
+                              Odds: x{winningItem.odds}
+                            </p>
+                          </div>
+                          <div className="flex justify-end space-x-2 mt-4 w-full">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setWinningItem(null);
+                                handleSpinWheel(selectedGame?._id || '');
+                              }}
+                              disabled={isSpinning}
+                            >
+                              {isSpinning ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Spinning...
+                                </>
+                              ) : (
+                                'Spin Again'
+                              )}
+                            </Button>
+                            <Button
+                              variant="default"
+                              onClick={() => {
+                                setSelectedGame(null);
+                                setWinningItem(null);
+                              }}
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </Card>
           ))}

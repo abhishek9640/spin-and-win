@@ -45,12 +45,13 @@ export default function UsersPage() {
         throw new Error("Authentication token not found. Please log in.");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/list`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/list?limit=10&page=1`, {
         method: "GET",
         headers: {
           Authorization: `${session?.user?.authToken}`,
         },
       });
+      console.log(response);
 
       if (!response.ok) {
         throw new Error("Failed to fetch users data. Please try again.");

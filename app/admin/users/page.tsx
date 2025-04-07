@@ -60,7 +60,7 @@ export default function UsersPage() {
       const data = await response.json();
       setUsers(data.data.list);
     } catch (error) {
-      console.error("🔴 Fetch Users Error:", error);
+      console.error("Fetch Users Error:", error);
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setLoading(false);
@@ -99,7 +99,7 @@ export default function UsersPage() {
           : []
       );
     } catch (error) {
-      console.error("🔴 Status Update Error:", error);
+      console.error(" Status Update Error:", error);
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setLoading(false);

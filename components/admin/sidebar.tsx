@@ -9,9 +9,9 @@ import {
   Users,
   GamepadIcon,
   WalletCards,
-  SettingsIcon,
-  ShieldCheck,
-  BarChart3,
+  // SettingsIcon,
+  // ShieldCheck,
+  // BarChart3,
   LogOut,
 } from "lucide-react"
 
@@ -36,21 +36,21 @@ const menuItems = [
     href: "/admin/transactions",
     icon: WalletCards,
   },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: SettingsIcon,
-  },
-  {
-    title: "Security",
-    href: "/admin/security",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Reports",
-    href: "/admin/reports",
-    icon: BarChart3,
-  },
+  // {
+  //   title: "Settings",
+  //   href: "/admin/settings",
+  //   icon: SettingsIcon,
+  // },
+  // {
+  //   title: "Security",
+  //   href: "/admin/security",
+  //   icon: ShieldCheck,
+  // },
+  // {
+  //   title: "Reports",
+  //   href: "/admin/reports",
+  //   icon: BarChart3,
+  // },
 ]
 
   // Handle Sign Out

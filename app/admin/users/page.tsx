@@ -33,6 +33,10 @@ export default function UsersPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<Users | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const usersPerPage = 10;
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -45,7 +49,7 @@ export default function UsersPage() {
         throw new Error("Authentication token not found. Please log in.");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/list?limit=10&page=1`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/list?limit=${usersPerPage}&page=${currentPage}`, {
         method: "GET",
         headers: {
           Authorization: `${session?.user?.authToken}`,
@@ -59,13 +63,15 @@ export default function UsersPage() {
 
       const data = await response.json();
       setUsers(data.data.list);
+      setTotalUsers(data.data.count);
+      setTotalPages(Math.ceil(data.data.count / usersPerPage));
     } catch (error) {
       console.error("Fetch Users Error:", error);
       setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, session]);
+  }, [API_BASE_URL, session, currentPage]);
 
   // Update User Status
   const setStatus = useCallback(async () => {
@@ -115,73 +121,115 @@ export default function UsersPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Users List</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Users List</h1>
+        <div className="text-sm text-gray-500">
+          Showing {users?.length || 0} of {totalUsers} users
+        </div>
+      </div>
 
       {loading && <p className="text-blue-500">Loading users...</p>}
       {errorMessage && <p className="text-red-500">{errorMessage}</p>}
 
       {!loading && users && users.length > 0 && (
-        <table className="w-full border-collapse border border-gray-300 mt-4">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border p-2 text-black">Username</th>
-              <th className="border p-2 text-black">Email</th>
-              <th className="border p-2 text-black">Phone</th>
-              <th className="border p-2 text-black">Status</th>
-              <th className="border p-2 text-black">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user._id} className="text-center">
-                <td className="border p-2">{user.username}</td>
-                <td className="border p-2">{user.email}</td>
-                <td className="border p-2">{user.phone_number}</td>
-                <td className="border p-2">
-                  {user.is_active ? (
-                    <span className="text-green-600 font-semibold">Active</span>
-                  ) : (
-                    <span className="text-red-600 font-semibold">Inactive</span>
-                  )}
-                </td>
-                <td className="border p-2">
-                  <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        className={`px-3 py-1 rounded text-white ${
-                          user.is_active ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
-                        }`}
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsModalOpen(true);
-                        }}
-                        disabled={loading}
-                      >
-                        {user.is_active ? "Deactivate" : "Activate"}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Confirm Action</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to {user.is_active ? "deactivate" : "activate"} this user?
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={setStatus} disabled={loading}>
-                          {loading ? "Processing..." : "Confirm"}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </td>
+        <>
+          <table className="w-full border-collapse border border-gray-300 mt-4">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2 text-black">Username</th>
+                <th className="border p-2 text-black">Email</th>
+                <th className="border p-2 text-black">Phone</th>
+                <th className="border p-2 text-black">Status</th>
+                <th className="border p-2 text-black">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user._id} className="text-center">
+                  <td className="border p-2">{user.username}</td>
+                  <td className="border p-2">{user.email}</td>
+                  <td className="border p-2">{user.phone_number}</td>
+                  <td className="border p-2">
+                    {user.is_active ? (
+                      <span className="text-green-600 font-semibold">Active</span>
+                    ) : (
+                      <span className="text-red-600 font-semibold">Inactive</span>
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className={`px-3 py-1 rounded text-white ${
+                            user.is_active ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
+                          }`}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsModalOpen(true);
+                          }}
+                          disabled={loading}
+                        >
+                          {user.is_active ? "Deactivate" : "Activate"}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Confirm Action</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to {user.is_active ? "deactivate" : "activate"} this user?
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={setStatus} disabled={loading}>
+                            {loading ? "Processing..." : "Confirm"}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-6 space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center space-x-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="w-10 h-10"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

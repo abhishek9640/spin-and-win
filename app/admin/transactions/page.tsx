@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 
 interface TransactionItem {
   name: string;
@@ -64,6 +65,10 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalTransactions, setTotalTransactions] = useState(0)
+  const transactionsPerPage = 10
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -76,7 +81,7 @@ export default function TransactionsPage() {
         throw new Error("Authentication token not found. Please sign in again.")
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/transaction-list?limit=10&page=1&status`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/transaction-list?limit=${transactionsPerPage}&page=${currentPage}&status`, {
         headers: {
           Authorization: `${token}`,
           "Content-Type": "application/json",
@@ -101,6 +106,8 @@ export default function TransactionsPage() {
       const responseData: TransactionsResponse = await response.json()
       if (responseData.success && responseData.data?.records) {
         setTransactions(responseData.data.records)
+        setTotalTransactions(responseData.data.count)
+        setTotalPages(Math.ceil(responseData.data.count / transactionsPerPage))
       } else {
         setError('Unexpected API response format')
       }
@@ -110,7 +117,7 @@ export default function TransactionsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [session, status, router, toast, API_BASE_URL])
+  }, [session, status, router, toast, API_BASE_URL, currentPage])
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -131,6 +138,9 @@ export default function TransactionsPage() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Transactions</h1>
+        <div className="text-sm text-gray-500">
+          Showing {transactions.length} of {totalTransactions} transactions
+        </div>
       </div>
 
       {error && (
@@ -150,62 +160,99 @@ export default function TransactionsPage() {
           <p className="text-gray-500">No transactions found.</p>
         </Card>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Item</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Admin Approved</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => {
-                const item: TransactionItem = JSON.parse(transaction.item || '{}')
-                const username = transaction.user_details?.username || "Unknown"
-                return (
-                  <TableRow key={transaction._id}>
-                    <TableCell>
-                      <div className="text-black">{username}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="capitalize text-black">{transaction.type}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-black">${transaction.amount.toFixed(2)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-sm ${
-                        transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {transaction.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-black">{item.name} (x{item.odds})</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-black">{new Date(transaction.createdAt).toLocaleString()}</div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-sm ${
-                        transaction.adminApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {transaction.adminApproved ? 'Yes' : 'No'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+        <>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Admin Approved</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((transaction) => {
+                  const item: TransactionItem = JSON.parse(transaction.item || '{}')
+                  const username = transaction.user_details?.username || "Unknown"
+                  return (
+                    <TableRow key={transaction._id}>
+                      <TableCell>
+                        <div className="text-black">{username}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="capitalize text-black">{transaction.type}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-black">${transaction.amount.toFixed(2)}</div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-sm ${
+                          transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {transaction.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-black">{item.name} (x{item.odds})</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-black">{new Date(transaction.createdAt).toLocaleString()}</div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-sm ${
+                          transaction.adminApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {transaction.adminApproved ? 'Yes' : 'No'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-6 space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center space-x-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="w-10 h-10"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -54,7 +54,7 @@ export default function GamesPage() {
     },
   })
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://spinwin.shreyanshkataria.com';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [games, setGames] = useState<Game[]>([])
   const [isLoading, setIsLoading] = useState(true)

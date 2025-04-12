@@ -188,7 +188,7 @@ export default function PlayPage() {
       const response = await fetch(`${API_BASE_URL}/api/v1/game/fetch-games`, {
         headers: {
           'Authorization': `${session.user.authToken}`,
-          "ngrok-skip-browser-warning": "true"
+
         }
       });
       console.log('Response:', response);
@@ -251,6 +251,30 @@ export default function PlayPage() {
           )}
         </div>
 
+        {/* Round 2 Qualification Banner */}
+        {games.some(game => game.round === 2 && game.status !== 'completed') && (
+          <div className="mb-8 p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="mr-4 bg-white bg-opacity-20 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Congratulations!</h2>
+                  <p className="text-white text-opacity-90">You&apos;ve qualified for Round 2. Keep playing to increase your chances of winning!</p>
+                </div>
+              </div>
+              <div className="hidden md:block">
+                <span className="inline-block bg-white bg-opacity-20 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  QUALIFIED FOR ROUND 2
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Authentication Check */}
         {sessionStatus === 'unauthenticated' && (
           <div className="text-center py-12">
@@ -299,71 +323,151 @@ export default function PlayPage() {
 
         {/* Games List */}
         {!loading && !error && games.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {games.map((game) => (
-              <Card key={game._id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                {game.imageUrl && (
-                  <div className="aspect-video w-full overflow-hidden">
-                    <Image
-                      src={game.imageUrl}
-                      alt={game.name || 'Game'}
-                      width={400}
-                      height={225}
-                      className="w-full h-full object-cover transition-transform hover:scale-105"
-                    />
-                  </div>
-                )}
-                <CardHeader>
-                  <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
-                  <CardDescription>
-                    {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Coins className="h-4 w-4 text-primary" />
-                    <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
-                  </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {game.items?.length} possible outcomes
-                  </div>
-                  {/* Conditional Display for Round or Winners */}
-                  {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
-                    <div className="mt-4 space-y-2">
-                      <div className="text-sm font-medium text-green-600">Winners</div>
-                      {game.winners.map((winner, index) => (
-                        <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded">
-                          <span className="font-semibold text-primary"><span className="text-muted-foreground">Number :</span> {winner.item?.name}</span>
-                          <span className="font-semibold text-primary"><span className="text-muted-foreground">Amount Won:</span> {winner.amountWon} USDT TRC 20</span>
+          <>
+            {/* Round 2 Qualified Games Section */}
+            {games.some(game => game.round === 2) && (
+              <div className="mb-10">
+                <h2 className="text-2xl font-bold mb-4 flex items-center">
+                  <span className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-3 py-1 rounded-full mr-3">
+                    ROUND 2
+                  </span>
+                  Your Qualified Games
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {games
+                    .filter(game => game.round === 2)
+                    .map((game) => (
+                      <Card key={game._id} className="overflow-hidden hover:shadow-lg transition-shadow border-2 border-purple-500">
+                        {game.imageUrl && (
+                          <div className="aspect-video w-full overflow-hidden">
+                            <Image
+                              src={game.imageUrl}
+                              alt={game.name || 'Game'}
+                              width={400}
+                              height={225}
+                              className="w-full h-full object-cover transition-transform hover:scale-105"
+                            />
+                          </div>
+                        )}
+                        <CardHeader>
+                          <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                          <CardDescription>
+                            {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Coins className="h-4 w-4 text-primary" />
+                            <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                          </div>
+                          <div className="mt-2 text-sm text-muted-foreground">
+                            {game.items?.length} possible outcomes
+                          </div>
+                          {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                            <div className="mt-4 space-y-2">
+                              <div className="text-sm font-medium text-green-600">Winners</div>
+                              {game.winners.map((winner, index) => (
+                                <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded">
+                                  <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
+                                  <span className="font-semibold text-primary"><span className="text-muted-foreground">Amount Won:</span> {winner.amountWon} USDT TRC 20</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-4">
+                              <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
+                                Round 2 Qualified
+                              </span>
+                            </div>
+                          )}
+                        </CardContent>
+
+                        <CardFooter>
+                          {game.status !== 'completed' ? (
+                            <Button className="w-full" asChild>
+                              <Link href={`/play/${game._id}`}>Play Now</Link>
+                            </Button>
+                          ) : (
+                            <div className="text-sm text-muted-foreground w-full text-center py-2">
+                              Game Completed
+                            </div>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other Games Section */}
+            <div>
+              <h2 className="text-2xl font-bold mb-4">All Games</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {games
+                  .filter(game => game.round !== 2)
+                  .map((game) => (
+                    <Card key={game._id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      {game.imageUrl && (
+                        <div className="aspect-video w-full overflow-hidden">
+                          <Image
+                            src={game.imageUrl}
+                            alt={game.name || 'Game'}
+                            width={400}
+                            height={225}
+                            className="w-full h-full object-cover transition-transform hover:scale-105"
+                          />
                         </div>
-                      ))}
-                    </div>
-                  ) : game.round !== undefined ? (
-                    <>
-                      {/* <div className="text-sm text-muted-foreground mt-2">You are qualified for</div> */}
-                      <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
-                        Round {game.round}
-                      </span>
-                    </>
-                  ) : null}
+                      )}
+                      <CardHeader>
+                        <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                        <CardDescription>
+                          {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Coins className="h-4 w-4 text-primary" />
+                          <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                        </div>
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          {game.items?.length} possible outcomes
+                        </div>
+                        {/* Conditional Display for Round or Winners */}
+                        {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                          <div className="mt-4 space-y-2">
+                            <div className="text-sm font-medium text-green-600">Winners</div>
+                            {game.winners.map((winner, index) => (
+                              <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded">
+                                <span className="font-semibold text-primary"><span className="text-muted-foreground">Number :</span> {winner.item?.name}</span>
+                                <span className="font-semibold text-primary"><span className="text-muted-foreground">Amount Won:</span> {winner.amountWon} USDT TRC 20</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : game.round !== undefined && game.round !== 2 ? (
+                          <>
+                            <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
+                              Round {game.round}
+                            </span>
+                          </>
+                        ) : null}
+                      </CardContent>
 
-                </CardContent>
-
-                <CardFooter>
-                  {game.status !== 'completed' ? (
-                    <Button className="w-full" asChild>
-                      <Link href={`/play/${game._id}`}>Play Now</Link>
-                    </Button>
-                  ) : (
-                    <div className="text-sm text-muted-foreground w-full text-center py-2">
-                      Game Completed
-                    </div>
-                  )}
-                </CardFooter>
-
-              </Card>
-            ))}
-          </div>
+                      <CardFooter>
+                        {game.status !== 'completed' ? (
+                          <Button className="w-full" asChild>
+                            <Link href={`/play/${game._id}`}>Play Now</Link>
+                          </Button>
+                        ) : (
+                          <div className="text-sm text-muted-foreground w-full text-center py-2">
+                            Game Completed
+                          </div>
+                        )}
+                      </CardFooter>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          </>
         )}
 
         {/* No Games Available */}

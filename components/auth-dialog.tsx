@@ -115,19 +115,20 @@ export function LoginButton() {
     setErrorMessage(null);
     setSuccessMessage(null);
     setLoading(true);
-
+  
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
+  
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to send OTP");
-
+  
       setOtpSent(true);
-      setSuccessMessage("OTP sent successfully. Check your email.");
+      // Show OTP in success message
+      setSuccessMessage(`OTP sent successfully: ${data.data}`);
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
@@ -138,6 +139,7 @@ export function LoginButton() {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     if (status === "authenticated" && !session?.user?.authToken) {

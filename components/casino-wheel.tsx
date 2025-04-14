@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 
 export function CasinoWheel() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [isSpinning, setIsSpinning] = useState(false)
+  const isSpinningRef = useRef(false)
+  const spinSpeedRef = useRef(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -14,25 +15,24 @@ export function CasinoWheel() {
     if (!ctx) return
 
     const prizes = [
-      { text: "100 USDT", color: "#FF3366" },
-      { text: "50 USDT", color: "#2E3192" },
-      { text: "200 USDT", color: "#00AB55" },
-      { text: "75 USDT", color: "#7635dc" },
-      { text: "150 USDT", color: "#2563eb" },
-      { text: "25 USDT", color: "#9333ea" },
-      { text: "300 USDT", color: "#FF9533" },
-      { text: "FREE SPIN", color: "#FF33A8" },
+      { text: "No. 1", color: "#FF3366" },
+      { text: "No. 2", color: "#2E3192" },
+      { text: "No. 3", color: "#00AB55" },
+      { text: "No. 4", color: "#7635dc" },
+      { text: "No. 5", color: "#2563eb" },
+      { text: "No. 6", color: "#9333ea" },
+      { text: "No. 7", color: "#FF9533" },
+      { text: "No. 8", color: "#FF33A8" },
+      { text: "No. 9", color: "#FF9533" },
     ]
 
     const segments = prizes.length
     const size = 400
     let rotation = 0
-    let spinSpeed = 0
     let animationFrameId: number
 
     canvas.width = size
     canvas.height = size
-
     function drawWheel() {
       if (!ctx) return
       ctx.clearRect(0, 0, size, size)
@@ -75,7 +75,7 @@ export function CasinoWheel() {
         ctx.restore()
       }
 
-      // Draw center circle with neon effect
+      // Center circle
       ctx.beginPath()
       ctx.fillStyle = "#000000"
       ctx.strokeStyle = "#00f7ff"
@@ -89,12 +89,12 @@ export function CasinoWheel() {
       ctx.shadowBlur = 0
 
       // Update rotation
-      if (isSpinning) {
-        rotation += spinSpeed
-        spinSpeed *= 0.98 // Gradually slow down
-        if (spinSpeed < 0.002) {
-          spinSpeed = 0
-          setIsSpinning(false)
+      if (isSpinningRef.current) {
+        rotation += spinSpeedRef.current
+        spinSpeedRef.current *= 0.98
+        if (spinSpeedRef.current < 0.002) {
+          spinSpeedRef.current = 0
+          isSpinningRef.current = false
           determineWinner()
         }
       }
@@ -106,25 +106,24 @@ export function CasinoWheel() {
       const anglePerSegment = (Math.PI * 2) / segments
       const normalizedRotation = (rotation % (Math.PI * 2)) + anglePerSegment / 2
       const winningIndex = Math.floor((segments - (normalizedRotation / anglePerSegment)) % segments)
-      console.log(`Winner: ${prizes[winningIndex].text}`)
+      console.log(`🎉 Winner: ${prizes[winningIndex]}`)
     }
 
-    drawWheel()
-
     function spinWheel() {
-      if (!isSpinning) {
-        setIsSpinning(true)
-        spinSpeed = 0.3 + Math.random() * 0.5 // Random spin speed
+      if (!isSpinningRef.current) {
+        isSpinningRef.current = true
+        spinSpeedRef.current = 0.3 + Math.random() * 0.5
       }
     }
 
+    drawWheel()
     canvas.addEventListener("click", spinWheel)
 
     return () => {
       canvas.removeEventListener("click", spinWheel)
       cancelAnimationFrame(animationFrameId)
     }
-  }, [isSpinning])
+  }, [])
 
   return (
     <div className="relative">

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Coins, Zap, Shield, Sparkles, CheckCircle, AlertCircle, Award, Repeat, ArrowRight, ChevronRight, ChevronsRight } from 'lucide-react'
 import { WalletAddressSync } from "@/components/WalletAddressSync"
 import Link from 'next/link'
-import Image from 'next/image'
+// import Image from 'next/image'
 
 export default function Home() {
   return (
@@ -107,7 +107,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-center mb-20">
             <div className="bg-black/30 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl border border-white/10">
-              <div className="aspect-video relative overflow-hidden">
+              {/* <div className="aspect-video relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
                 <Image 
                   src="/images/round-1.png" 
@@ -120,7 +120,7 @@ export default function Home() {
                     ROUND 1
                   </span>
                 </div>
-              </div>
+              </div> */}
               <div className="p-6">
                 <h3 className="text-2xl font-bold mb-4">The Multi-Bet Round</h3>
                 <ul className="space-y-3">
@@ -130,7 +130,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-start">
                     <ChevronRight className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
-                    <span>Select multiple numbers between 1 to 9</span>
+                    <span>Select any one number between 1 to 9</span>
                   </li>
                   <li className="flex items-start">
                     <ChevronRight className="h-5 w-5 text-primary mt-0.5 mr-2 flex-shrink-0" />
@@ -162,10 +162,10 @@ export default function Home() {
             </div>
 
             <div className="bg-black/30 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl border border-white/10">
-              <div className="aspect-video relative overflow-hidden">
+              {/* <div className="aspect-video relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
                 <Image 
-                  src="/images/game-round2.jpg" 
+                  src="/images/wheel.svg" 
                   alt="Round 2 Gameplay" 
                   fill 
                   className="object-cover"
@@ -175,7 +175,7 @@ export default function Home() {
                     ROUND 2
                   </span>
                 </div>
-              </div>
+              </div> */}
               <div className="p-6">
                 <h3 className="text-2xl font-bold mb-4">The High-Stakes Final Spin</h3>
                 <ul className="space-y-3">

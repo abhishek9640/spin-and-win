@@ -97,55 +97,39 @@ export function ConnectWallet() {
   }, [isConnected, address, session])
 
   const connectMobileWallet = () => {
-    // Generate the connection URL with proper parameters
-    const currentUrl = window.location.href;
-    const encodedUrl = encodeURIComponent(currentUrl);
-    const callbackUrl = encodeURIComponent(window.location.origin);
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(2);
-    
-    // Use TronLink's latest mobile connection URL with auth parameters
-    const tronLinkUrl = `https://www.tronlink.org/api/wallet/connect?` + 
-      `callback=${callbackUrl}&` +
-      `param=${encodedUrl}&` +
-      `timestamp=${timestamp}&` +
-      `nonce=${nonce}&` +
-      `type=connect`;
-    
-    // Try to open TronLink app first
-    const appUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}&callback=${callbackUrl}&type=connect`;
-    window.location.href = appUrl;
+    try {
+      // Format the request data according to TronLink mobile specifications
+      const dappData = {
+        protocol: 'TronLink',
+        version: '1.0',
+        dappName: 'Crypto Spin',
+        dappIcon: `${window.location.origin}/favicon.ico`,
+        network: 'mainnet',
+        action: 'connect',
+        message: 'Connect to Crypto Spin'
+      };
 
-    // Fallback to web popup if app doesn't open
-    setTimeout(() => {
-      const popup = window.open(tronLinkUrl, 'TronLink Connect', 'width=600,height=600');
+      // Encode the data properly
+      const base64Data = Buffer.from(JSON.stringify(dappData)).toString('base64');
       
-      // Listen for messages from the popup
-      window.addEventListener('message', function(event) {
-        if (event.origin !== 'https://www.tronlink.org') return;
-        
-        if (event.data && event.data.message && event.data.message.action === "setAccount") {
-          const address = event.data.message.data.address;
-          if (address) {
-            setIsConnected(true);
-            setAddress(address);
-            toast.success('Wallet connected successfully!');
-            popup?.close();
-          }
-        }
-      });
+      // Construct the mobile deep link with the exact format TronLink expects
+      const tronLinkUrl = `tronlinkoutside://dapp?param=${base64Data}`;
+      
+      // Open TronLink app
+      window.location.href = tronLinkUrl;
 
-      // Fallback to app store if popup is blocked or app is not installed
+      // Fallback to app store after delay if app doesn't open
       setTimeout(() => {
-        if (!popup || popup.closed) {
-          const isAndroid = /android/i.test(navigator.userAgent);
-          const storeUrl = isAndroid 
-            ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
-            : 'https://apps.apple.com/us/app/tronlink/id1385446669';
-          window.location.href = storeUrl;
-        }
+        const isAndroid = /android/i.test(navigator.userAgent);
+        const storeUrl = isAndroid 
+          ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
+          : 'https://apps.apple.com/us/app/tronlink-trx-btt-wallet/id1453530188';
+        window.location.href = storeUrl;
       }, 2000);
-    }, 1000);
+    } catch (error) {
+      console.error('TronLink connection error:', error);
+      toast.error('Failed to connect wallet. Please try again.');
+    }
   };
 
   const connectWallet = async () => {

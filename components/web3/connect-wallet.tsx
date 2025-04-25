@@ -1,9 +1,10 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { Wallet, User } from 'lucide-react'
+import { Wallet, User, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSession } from "next-auth/react"
+import { toast } from 'sonner'
 
 // Add TronLink types
 declare global {
@@ -28,6 +29,17 @@ export function ConnectWallet() {
   const { data: session } = useSession()
   const [username, setUsername] = useState<string>("")
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isMobile, setIsMobile] = useState<boolean>(false)
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = (navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera || '').toLowerCase();
+      const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+      setIsMobile(mobileRegex.test(userAgent));
+    };
+    checkMobile();
+  }, []);
 
   // Check if TronLink is installed
   useEffect(() => {
@@ -84,9 +96,33 @@ export function ConnectWallet() {
     }
   }, [isConnected, address, session])
 
+  const connectMobileWallet = () => {
+    // Generate a deep link to TronLink mobile app
+    const currentUrl = window.location.href;
+    const encodedUrl = encodeURIComponent(currentUrl);
+    const tronLinkUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}`;
+    
+    // Try to open TronLink app
+    window.location.href = tronLinkUrl;
+    
+    // Fallback to app store if app is not installed
+    setTimeout(() => {
+      const isAndroid = /android/i.test(navigator.userAgent);
+      const storeUrl = isAndroid 
+        ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
+        : 'https://apps.apple.com/us/app/tronlink/id1385446669';
+      window.location.href = storeUrl;
+    }, 1000);
+  };
+
   const connectWallet = async () => {
     setIsLoading(true)
     try {
+      if (isMobile) {
+        connectMobileWallet();
+        return;
+      }
+
       if (!isTronLinkInstalled) {
         window.open('https://www.tronlink.org/', '_blank')
         return
@@ -104,17 +140,20 @@ export function ConnectWallet() {
               const currentAddress = window.tronWeb.defaultAddress.base58
               setIsConnected(true)
               setAddress(currentAddress)
+              toast.success('Wallet connected successfully!')
             }
           } else {
             console.error("TronLink is not available")
-            alert("Please make sure TronLink extension is installed and unlocked")
+            toast.error("Please make sure TronLink extension is installed and unlocked")
           }
         } catch (error) {
           console.error("Error connecting to TronLink:", error)
+          toast.error("Failed to connect wallet. Please try again.")
         }
       }
     } catch (error) {
       console.error("TronLink connection error:", error)
+      toast.error("Failed to connect wallet. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -125,7 +164,7 @@ export function ConnectWallet() {
     // Clear local state instead
     setIsConnected(false)
     setAddress("")
-    alert("To fully disconnect, please log out from your TronLink wallet extension.")
+    toast.info("To fully disconnect, please log out from your TronLink wallet.")
   }
 
   if (isConnected && address) {
@@ -154,8 +193,8 @@ export function ConnectWallet() {
         className="flex items-center gap-4"
         disabled={isLoading}
       >
-        <Wallet className="w-4 h-4" />
-        {isLoading ? 'Connecting...' : !isTronLinkInstalled ? 'Install TronLink' : 'Connect TronLink'}
+        {isMobile ? <Smartphone className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
+        {isLoading ? 'Connecting...' : isMobile ? 'Open TronLink App' : !isTronLinkInstalled ? 'Install TronLink' : 'Connect TronLink'}
       </Button>
     </div>  
   )

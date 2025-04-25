@@ -97,71 +97,43 @@ export function ConnectWallet() {
   }, [isConnected, address, session])
 
   const connectMobileWallet = () => {
-    try {
-      // Format the request data according to TronLink mobile specifications
-      const dappData = {
-        protocol: 'TronLink',
-        version: '1.0',
-        dappName: 'Crypto Spin',
-        dappIcon: `${window.location.origin}/favicon.ico`,
-        network: 'mainnet',
-        action: 'connect',
-        message: 'Connect to Crypto Spin'
-      };
+    // Generate a deep link to TronLink mobile app with proper parameters
+    const currentUrl = window.location.href;
+    const encodedUrl = encodeURIComponent(currentUrl);
+    const callbackUrl = encodeURIComponent(window.location.origin);
+    const tronLinkUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}&callback=${callbackUrl}`;
+    
+    // Create a hidden iframe to handle the response
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = tronLinkUrl;
+    document.body.appendChild(iframe);
 
-      // Encode the data properly
-      const base64Data = Buffer.from(JSON.stringify(dappData)).toString('base64');
-      
-      const isAndroid = /android/i.test(navigator.userAgent);
-      
-      if (isAndroid) {
-        // For Android, try both intent URL and universal link
-        const intentUrl = `intent://dapp?param=${base64Data}#Intent;scheme=tronlinkoutside;package=com.tronlinkpro.wallet;end;`;
-        const universalLink = `https://app.tronlink.org/dapp?param=${base64Data}`;
-        
-        // Try universal link first
-        window.location.href = universalLink;
-        
-        // Fallback to intent URL after a short delay if universal link doesn't work
-        setTimeout(() => {
-          if (document.hasFocus()) {
-            window.location.href = intentUrl;
-          }
-        }, 1000);
-      } else {
-        // For iOS, use regular deep link
-        const tronLinkUrl = `tronlinkoutside://dapp?param=${base64Data}`;
-        
-        // Create and click a hidden link (more reliable than location.href on iOS)
-        const link = document.createElement('a');
-        link.href = tronLinkUrl;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    // Listen for messages from TronLink mobile app
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.message && event.data.message.action === "setAccount") {
+        const address = event.data.message.data.address;
+        if (address) {
+          setIsConnected(true);
+          setAddress(address);
+          toast.success('Wallet connected successfully!');
+        }
       }
+    });
 
-      // Only redirect to store if deep link fails after a delay
-      const redirectTimer = setTimeout(() => {
-        if (document.hasFocus()) {  // Only redirect if page is still focused
-          const storeUrl = isAndroid 
-            ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
-            : 'https://apps.apple.com/us/app/tronlink-trx-btt-wallet/id1453530188';
-          window.location.href = storeUrl;
-        }
-      }, 3000);
+    // Fallback to app store if app is not installed
+    setTimeout(() => {
+      const isAndroid = /android/i.test(navigator.userAgent);
+      const storeUrl = isAndroid 
+        ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
+        : 'https://apps.apple.com/us/app/tronlink/id1385446669';
+      window.location.href = storeUrl;
+    }, 2000);
 
-      // Clear the redirect timer if the app was opened
-      window.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          clearTimeout(redirectTimer);
-        }
-      }, { once: true });
-
-    } catch (error) {
-      console.error('TronLink connection error:', error);
-      toast.error('Failed to connect wallet. Please try again.');
-    }
+    // Clean up iframe after timeout
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 5000);
   };
 
   const connectWallet = async () => {

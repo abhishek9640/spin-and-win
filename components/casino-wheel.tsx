@@ -15,15 +15,14 @@ export function CasinoWheel() {
     if (!ctx) return
 
     const prizes = [
-      { text: "No. 1", color: "#FF3366" },
-      { text: "No. 2", color: "#2E3192" },
-      { text: "No. 3", color: "#00AB55" },
-      { text: "No. 4", color: "#7635dc" },
-      { text: "No. 5", color: "#2563eb" },
-      { text: "No. 6", color: "#9333ea" },
-      { text: "No. 7", color: "#FF9533" },
-      { text: "No. 8", color: "#FF33A8" },
-      { text: "No. 9", color: "#FF9533" },
+      { text: "2", color: "#2E3192" },
+      { text: "3", color: "#00AB55" },
+      { text: "4", color: "#7635dc" },
+      { text: "5", color: "#2563eb" },
+      { text: "6", color: "#9333ea" },
+      { text: "7", color: "#FF9533" },
+      { text: "8", color: "#FF33A8" },
+      { text: "9", color: "#FF9533" },
     ]
 
     const segments = prizes.length
@@ -70,7 +69,7 @@ export function CasinoWheel() {
         ctx.rotate(i * anglePerSegment + rotation + anglePerSegment / 2)
         ctx.textAlign = "right"
         ctx.fillStyle = "#ffffff"
-        ctx.font = "bold 16px Arial"
+        ctx.font = "bold 24px Arial"
         ctx.fillText(prizes[i].text, size / 2 - 30, 5)
         ctx.restore()
       }

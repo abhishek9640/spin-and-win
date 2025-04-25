@@ -404,6 +404,25 @@ export default function GamePage() {
               Back to Games
             </Link>
           </Button>
+
+          <div className="w-full lg:w-1/2 text-center lg:text-left">
+              <motion.h1
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 drop-shadow-lg"
+              >
+                JACKPOT
+                <span className="block text-3xl md:text-4xl lg:text-5xl mt-2 bg-gradient-to-r from-blue-400 to-blue-600 text-transparent bg-clip-text">WIN UPTO 25 TIMES</span>
+              </motion.h1>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="flex flex-wrap justify-center lg:justify-start gap-4"
+              >
+              </motion.div>
+            </div>
           
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
             <div>
@@ -536,7 +555,6 @@ export default function GamePage() {
               <Tabs defaultValue="standard" className="w-full">
                 <TabsList className="w-full mb-6">
                   <TabsTrigger value="standard" className="flex-1">Standard Bet</TabsTrigger>
-                  <TabsTrigger value="quick" className="flex-1">Quick Bet</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="standard">
@@ -574,7 +592,7 @@ export default function GamePage() {
                             type="text"
                             value={betAmount}
                             onChange={handleAmountChange}
-                            placeholder={`${game.minBet || '0.01'} - ${game.maxBet || 'unlimited'}`}
+                            placeholder={`${game.minBet || '2.00'} - ${game.maxBet || 'unlimited'}`}
                             className="pl-10 text-lg"
                             disabled={!isConnected || isPlacingBet}
                           />
@@ -592,7 +610,7 @@ export default function GamePage() {
                           <Label className="text-base font-medium">Select Outcome</Label>
                           {selectedItem && (
                             <Badge variant="outline" className="ml-2">
-                              Selected: {selectedItem.name} (x{selectedItem.odds})
+                              Selected: {selectedItem.name} 
                             </Badge>
                           )}
                         </div>
@@ -615,7 +633,7 @@ export default function GamePage() {
                                 disabled={isPlacingBet || !isConnected}
                               >
                                 <span className="text-lg font-bold">{item.name}</span>
-                                <span className="text-xs">x{item.odds}</span>
+                               
                               </Button>
                             </motion.div>
                           ))}
@@ -654,61 +672,6 @@ export default function GamePage() {
                         )}
                       </Button>
                     </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="quick">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Quick Bet</CardTitle>
-                      <CardDescription>
-                        Place a bet quickly with preset amounts
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-3 gap-4">
-                          {[5, 10, 20, 50, 100, 200].map((amount) => (
-                            <Button
-                              key={amount}
-                              variant="outline"
-                              onClick={() => setBetAmount(amount.toString())}
-                              className="h-16 text-lg font-semibold"
-                              disabled={!isConnected || isPlacingBet}
-                            >
-                              {amount} USDT
-                            </Button>
-                          ))}
-                        </div>
-                        
-                        {betAmount && (
-                          <div className="bg-muted p-4 rounded-lg">
-                            <h4 className="font-medium mb-2">Current Bet</h4>
-                            <p>Amount: <span className="font-bold">{betAmount} USDT</span></p>
-                            <p>Outcome: {selectedItem ? selectedItem.name : 'Not selected'}</p>
-                          </div>
-                        )}
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => {
-                              setBetAmount('');
-                              setSelectedItem(null);
-                            }}
-                            disabled={!betAmount && !selectedItem}
-                          >
-                            Clear
-                          </Button>
-                          <Button
-                            onClick={handlePlaceBet}
-                            disabled={isPlacingBet || !selectedItem || !betAmount || !isConnected}
-                          >
-                            {isPlacingBet ? 'Processing...' : 'Place Bet'}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
                   </Card>
                 </TabsContent>
               </Tabs>

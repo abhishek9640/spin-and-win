@@ -101,38 +101,51 @@ export function ConnectWallet() {
     const currentUrl = window.location.href;
     const encodedUrl = encodeURIComponent(currentUrl);
     const callbackUrl = encodeURIComponent(window.location.origin);
+    const timestamp = Date.now();
+    const nonce = Math.random().toString(36).substring(2);
     
-    // Use TronLink's official mobile connection URL
-    const tronLinkUrl = `https://www.tronlink.org/api/wallet/connect?callback=${callbackUrl}&param=${encodedUrl}`;
+    // Use TronLink's latest mobile connection URL with auth parameters
+    const tronLinkUrl = `https://www.tronlink.org/api/wallet/connect?` + 
+      `callback=${callbackUrl}&` +
+      `param=${encodedUrl}&` +
+      `timestamp=${timestamp}&` +
+      `nonce=${nonce}&` +
+      `type=connect`;
     
-    // Open in a popup window
-    const popup = window.open(tronLinkUrl, 'TronLink Connect', 'width=600,height=600');
-    
-    // Listen for messages from the popup
-    window.addEventListener('message', function(event) {
-      if (event.origin !== 'https://www.tronlink.org') return;
-      
-      if (event.data && event.data.message && event.data.message.action === "setAccount") {
-        const address = event.data.message.data.address;
-        if (address) {
-          setIsConnected(true);
-          setAddress(address);
-          toast.success('Wallet connected successfully!');
-          popup?.close();
-        }
-      }
-    });
+    // Try to open TronLink app first
+    const appUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}&callback=${callbackUrl}&type=connect`;
+    window.location.href = appUrl;
 
-    // Fallback to app store if popup is blocked or app is not installed
+    // Fallback to web popup if app doesn't open
     setTimeout(() => {
-      if (!popup || popup.closed) {
-        const isAndroid = /android/i.test(navigator.userAgent);
-        const storeUrl = isAndroid 
-          ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
-          : 'https://apps.apple.com/us/app/tronlink/id1385446669';
-        window.location.href = storeUrl;
-      }
-    }, 2000);
+      const popup = window.open(tronLinkUrl, 'TronLink Connect', 'width=600,height=600');
+      
+      // Listen for messages from the popup
+      window.addEventListener('message', function(event) {
+        if (event.origin !== 'https://www.tronlink.org') return;
+        
+        if (event.data && event.data.message && event.data.message.action === "setAccount") {
+          const address = event.data.message.data.address;
+          if (address) {
+            setIsConnected(true);
+            setAddress(address);
+            toast.success('Wallet connected successfully!');
+            popup?.close();
+          }
+        }
+      });
+
+      // Fallback to app store if popup is blocked or app is not installed
+      setTimeout(() => {
+        if (!popup || popup.closed) {
+          const isAndroid = /android/i.test(navigator.userAgent);
+          const storeUrl = isAndroid 
+            ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
+            : 'https://apps.apple.com/us/app/tronlink/id1385446669';
+          window.location.href = storeUrl;
+        }
+      }, 2000);
+    }, 1000);
   };
 
   const connectWallet = async () => {

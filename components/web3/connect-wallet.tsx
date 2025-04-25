@@ -97,14 +97,30 @@ export function ConnectWallet() {
   }, [isConnected, address, session])
 
   const connectMobileWallet = () => {
-    // Generate a deep link to TronLink mobile app
+    // Generate a deep link to TronLink mobile app with proper parameters
     const currentUrl = window.location.href;
     const encodedUrl = encodeURIComponent(currentUrl);
-    const tronLinkUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}`;
+    const callbackUrl = encodeURIComponent(window.location.origin);
+    const tronLinkUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}&callback=${callbackUrl}`;
     
-    // Try to open TronLink app
-    window.location.href = tronLinkUrl;
-    
+    // Create a hidden iframe to handle the response
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = tronLinkUrl;
+    document.body.appendChild(iframe);
+
+    // Listen for messages from TronLink mobile app
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.message && event.data.message.action === "setAccount") {
+        const address = event.data.message.data.address;
+        if (address) {
+          setIsConnected(true);
+          setAddress(address);
+          toast.success('Wallet connected successfully!');
+        }
+      }
+    });
+
     // Fallback to app store if app is not installed
     setTimeout(() => {
       const isAndroid = /android/i.test(navigator.userAgent);
@@ -112,7 +128,12 @@ export function ConnectWallet() {
         ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
         : 'https://apps.apple.com/us/app/tronlink/id1385446669';
       window.location.href = storeUrl;
-    }, 1000);
+    }, 2000);
+
+    // Clean up iframe after timeout
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 5000);
   };
 
   const connectWallet = async () => {

@@ -112,20 +112,52 @@ export function ConnectWallet() {
       // Encode the data properly
       const base64Data = Buffer.from(JSON.stringify(dappData)).toString('base64');
       
-      // Construct the mobile deep link with the exact format TronLink expects
-      const tronLinkUrl = `tronlinkoutside://dapp?param=${base64Data}`;
+      const isAndroid = /android/i.test(navigator.userAgent);
       
-      // Open TronLink app
-      window.location.href = tronLinkUrl;
+      if (isAndroid) {
+        // For Android, try both intent URL and universal link
+        const intentUrl = `intent://dapp?param=${base64Data}#Intent;scheme=tronlinkoutside;package=com.tronlinkpro.wallet;end;`;
+        const universalLink = `https://app.tronlink.org/dapp?param=${base64Data}`;
+        
+        // Try universal link first
+        window.location.href = universalLink;
+        
+        // Fallback to intent URL after a short delay if universal link doesn't work
+        setTimeout(() => {
+          if (document.hasFocus()) {
+            window.location.href = intentUrl;
+          }
+        }, 1000);
+      } else {
+        // For iOS, use regular deep link
+        const tronLinkUrl = `tronlinkoutside://dapp?param=${base64Data}`;
+        
+        // Create and click a hidden link (more reliable than location.href on iOS)
+        const link = document.createElement('a');
+        link.href = tronLinkUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
-      // Fallback to app store after delay if app doesn't open
-      setTimeout(() => {
-        const isAndroid = /android/i.test(navigator.userAgent);
-        const storeUrl = isAndroid 
-          ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
-          : 'https://apps.apple.com/us/app/tronlink-trx-btt-wallet/id1453530188';
-        window.location.href = storeUrl;
-      }, 2000);
+      // Only redirect to store if deep link fails after a delay
+      const redirectTimer = setTimeout(() => {
+        if (document.hasFocus()) {  // Only redirect if page is still focused
+          const storeUrl = isAndroid 
+            ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
+            : 'https://apps.apple.com/us/app/tronlink-trx-btt-wallet/id1453530188';
+          window.location.href = storeUrl;
+        }
+      }, 3000);
+
+      // Clear the redirect timer if the app was opened
+      window.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          clearTimeout(redirectTimer);
+        }
+      }, { once: true });
+
     } catch (error) {
       console.error('TronLink connection error:', error);
       toast.error('Failed to connect wallet. Please try again.');

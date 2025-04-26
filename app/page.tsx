@@ -42,14 +42,13 @@ export default function Home() {
               <div className="space-y-6">
                 <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl xl:text-7xl/none">
                   <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                    Spin, Win & Multiply
+                    JACKPOT
                   </span>
                   <br />
-                  <span>Your Crypto Fortune</span>
+                  <span>WIN UP TO 25 Times</span>
                 </h1>
                 <p className="max-w-[600px] text-xl leading-relaxed text-muted-foreground">
-                  The ultimate crypto luck game with up to 25x multipliers! Place your bets, spin the wheel, 
-                  and watch your USDT multiply instantly.
+                Play fair, transparent games with instant USDT rewards on the TRON network
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-5">
@@ -89,6 +88,51 @@ export default function Home() {
                 <CasinoWheel />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Showcase Section */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-background to-background/90"></div>
+        <div className="container relative z-10 px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4 inline-block bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+              Experience the Excitement
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Watch our thrilling casino experience in action
+            </p>
+          </div>
+          
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/30 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-50"></div>
+            <video 
+              className="w-full h-auto rounded-2xl" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              poster="/images/casino-bg.jpg"
+            >
+              <source src="/casino.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="">
+            
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-12 text-center">
+            <Button size="lg" className="text-lg px-8 py-6" asChild>
+              <Link href="/play">
+                <span>Start Playing Now</span>
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

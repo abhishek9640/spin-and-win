@@ -125,7 +125,7 @@ export function ConnectWallet() {
     setTimeout(() => {
       const isAndroid = /android/i.test(navigator.userAgent);
       const storeUrl = isAndroid 
-        ? 'https://play.google.com/store/apps/details?id=org.tron.trongrid'
+        ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
         : 'https://apps.apple.com/us/app/tronlink/id1385446669';
       window.location.href = storeUrl;
     }, 2000);

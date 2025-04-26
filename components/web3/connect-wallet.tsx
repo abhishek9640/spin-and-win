@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from "next-auth/react"
 import { toast } from 'sonner'
 
-// Add TronLink types
+// Add TronLink types to global window
 declare global {
   interface Window {
     tronWeb?: {
@@ -41,13 +41,12 @@ export function ConnectWallet() {
     checkMobile();
   }, []);
 
-  // Check if TronLink is installed
+  // Check if TronLink is installed and listen to account changes
   useEffect(() => {
     const checkTronLink = async () => {
       if (typeof window !== 'undefined' && window.tronWeb) {
         setIsTronLinkInstalled(true)
-        
-        // Check if already connected
+
         try {
           const tronWebState = !!window.tronWeb && window.tronWeb.ready
           if (tronWebState) {
@@ -64,10 +63,10 @@ export function ConnectWallet() {
     }
     
     checkTronLink()
-    
-    // Add event listener for account changes
+
+    // Listen for account changes
     if (typeof window !== 'undefined') {
-      window.addEventListener('message', function (e) {
+      window.addEventListener('message', (e) => {
         if (e.data.message && e.data.message.action === "accountsChanged") {
           const currentAddress = window.tronWeb?.defaultAddress?.base58
           if (currentAddress) {
@@ -82,60 +81,47 @@ export function ConnectWallet() {
     }
   }, [])
 
+  // Update username when connected
   useEffect(() => {
     if (isConnected && address) {
       console.log('Connected TronLink Address:', address)
       
-      // Set a username based on session data or a default one
       if (session && 'user' in session && session.user && typeof session.user === 'object' && 'name' in session.user) {
         setUsername(session.user.name as string)
       } else {
-        // Create a username based on address if no session name
         setUsername(`User_${address.slice(0, 4)}`)
       }
     }
   }, [isConnected, address, session])
 
+  // Handle mobile wallet connection
   const connectMobileWallet = () => {
-    // Generate a deep link to TronLink mobile app with proper parameters
-    const currentUrl = window.location.href;
-    const encodedUrl = encodeURIComponent(currentUrl);
-    const callbackUrl = encodeURIComponent(window.location.origin);
-    const tronLinkUrl = `tronlinkoutside://pull.activity?param=${encodedUrl}&callback=${callbackUrl}`;
-    
-    // Create a hidden iframe to handle the response
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = tronLinkUrl;
-    document.body.appendChild(iframe);
+    try {
+      const dappUrl = encodeURIComponent(window.location.href);
+      const tronLinkDeepLink = `tronlinkoutside://dapp?url=${dappUrl}`;
 
-    // Listen for messages from TronLink mobile app
-    window.addEventListener('message', function(event) {
-      if (event.data && event.data.message && event.data.message.action === "setAccount") {
-        const address = event.data.message.data.address;
-        if (address) {
-          setIsConnected(true);
-          setAddress(address);
-          toast.success('Wallet connected successfully!');
+      window.location.href = tronLinkDeepLink;
+
+      const timer = setTimeout(() => {
+        const isAndroid = /android/i.test(navigator.userAgent);
+        const storeUrl = isAndroid
+          ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
+          : 'https://apps.apple.com/us/app/tronlink/id1385446669';
+        window.location.href = storeUrl;
+      }, 3000);
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          clearTimeout(timer);
         }
-      }
-    });
-
-    // Fallback to app store if app is not installed
-    setTimeout(() => {
-      const isAndroid = /android/i.test(navigator.userAgent);
-      const storeUrl = isAndroid 
-        ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
-        : 'https://apps.apple.com/us/app/tronlink/id1385446669';
-      window.location.href = storeUrl;
-    }, 2000);
-
-    // Clean up iframe after timeout
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 5000);
+      });
+    } catch (error) {
+      console.error("Error connecting to mobile wallet:", error);
+      toast.error("Failed to connect mobile wallet. Please try again or install TronLink.");
+    }
   };
 
+  // Handle desktop wallet connection
   const connectWallet = async () => {
     setIsLoading(true)
     try {
@@ -148,14 +134,12 @@ export function ConnectWallet() {
         window.open('https://www.tronlink.org/', '_blank')
         return
       }
-      
+
       if (window.tronWeb) {
         try {
-          // Request account access
           if (window.tronLink) {
             await window.tronLink.request({ method: 'tron_requestAccounts' })
-          
-            // Check if connected after request
+
             const tronWebState = window.tronWeb.ready
             if (tronWebState) {
               const currentAddress = window.tronWeb.defaultAddress.base58
@@ -180,9 +164,8 @@ export function ConnectWallet() {
     }
   }
 
+  // Disconnect wallet
   const disconnectWallet = () => {
-    // TronLink doesn't have a direct disconnect method
-    // Clear local state instead
     setIsConnected(false)
     setAddress("")
     toast.info("To fully disconnect, please log out from your TronLink wallet.")
@@ -217,6 +200,6 @@ export function ConnectWallet() {
         {isMobile ? <Smartphone className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
         {isLoading ? 'Connecting...' : isMobile ? 'Open TronLink App' : !isTronLinkInstalled ? 'Install TronLink' : 'Connect TronLink'}
       </Button>
-    </div>  
+    </div>
   )
-} 
+}

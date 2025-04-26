@@ -1,4 +1,3 @@
-import { CasinoWheel } from "@/components/casino-wheel"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,7 +14,19 @@ export default function Home() {
 
       {/* Hero Section with Animated Background */}
       <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 z-0 bg-[url('/images/casino-bg.jpg')] bg-cover bg-center opacity-10"></div>
+        <div className="absolute inset-0 z-0">
+          <video 
+            className="w-full h-full object-cover opacity-30" 
+            autoPlay 
+            loop 
+            muted 
+            playsInline
+            poster="/images/casino-bg.jpg"
+          >
+            <source src="/casino.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent to-background"></div>
         
         {/* Floating Coins Animation */}
@@ -37,105 +48,56 @@ export default function Home() {
         </div>
         
         <div className="container relative z-10 px-4 md:px-6">
-          <div className="grid gap-12 lg:grid-cols-[1fr_450px] lg:gap-16 xl:grid-cols-[1fr_500px] items-center">
-            <div className="flex flex-col justify-center space-y-8">
-              <div className="space-y-6">
-                <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl xl:text-7xl/none">
-                  <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                    JACKPOT
-                  </span>
-                  <br />
-                  <span>WIN UP TO 25 Times</span>
-                </h1>
-                <p className="max-w-[600px] text-xl leading-relaxed text-muted-foreground">
-                Play fair, transparent games with instant USDT rewards on the TRON network
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-5">
-                <Button size="lg" className="text-lg px-8 py-6" asChild>
-                  <Link href="/play">
-                    <span>Start Playing</span>
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6">
-                  Learn More
-                </Button>
-              </div>
+          <div className="flex flex-col justify-center space-y-8 max-w-4xl mx-auto text-center">
+            <div className="space-y-6">
+              <h1 className="text-6xl md:text-8xl font-extrabold tracking-tight text-center leading-tight">
+                <span className="block bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+                  BIG WINS
+                </span>
+                <span className="block bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+                  AWAIT!
+                </span>
+              </h1>
+              <p className="mt-6 text-2xl md:text-3xl font-bold text-center bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+                Spin the Wheel. Beat the Odds. WIN BIG Today!
+              </p>
               
-              <div className="flex flex-wrap gap-4 pt-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>USDT (TRC-20) Bets</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Up to 25x Rewards</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Instant Payouts</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Multiple Rounds</span>
-                </div>
-              </div>
             </div>
-            <div className="relative flex items-center justify-center">
-              <div className="absolute -inset-4 bg-gradient-to-r from-primary to-purple-500 rounded-full blur-3xl opacity-25 animate-pulse"></div>
-              <div className="relative z-10 transform transition-transform hover:scale-105 duration-500">
-                <CasinoWheel />
+            <div className="flex flex-col sm:flex-row gap-5 justify-center">
+              <Button size="lg" className="text-lg px-8 py-6" asChild>
+                <Link href="/play">
+                  <span>Start Playing</span>
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+                Learn More
+              </Button>
+            </div>
+            
+            <div className="flex flex-wrap gap-4 pt-4 justify-center">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span>USDT (TRC-20) Bets</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span>Up to 25x Rewards</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span>Instant Payouts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span>Multiple Rounds</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Video Showcase Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 z-0 bg-gradient-to-b from-background to-background/90"></div>
-        <div className="container relative z-10 px-4 md:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4 inline-block bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              Experience the Excitement
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Watch our thrilling casino experience in action
-            </p>
-          </div>
-          
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/30 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-50"></div>
-            <video 
-              className="w-full h-auto rounded-2xl" 
-              autoPlay 
-              loop 
-              muted 
-              playsInline
-              poster="/images/casino-bg.jpg"
-            >
-              <source src="/casino.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-            
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="">
-            
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-12 text-center">
-            <Button size="lg" className="text-lg px-8 py-6" asChild>
-              <Link href="/play">
-                <span>Start Playing Now</span>
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+
 
       {/* Game Instructions Section */}
       <section className="py-20" id="how-to-play">

@@ -5,6 +5,7 @@ import { Wallet, User, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSession } from "next-auth/react"
 import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
 
 // Add TronLink types to global window
 declare global {
@@ -30,6 +31,8 @@ export function ConnectWallet() {
   const [username, setUsername] = useState<string>("")
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isMobile, setIsMobile] = useState<boolean>(false)
+  const [showManualInput, setShowManualInput] = useState<boolean>(false)
+  const [manualAddress, setManualAddress] = useState<string>("")
 
   // Check if device is mobile
   useEffect(() => {
@@ -108,6 +111,7 @@ export function ConnectWallet() {
           ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
           : 'https://apps.apple.com/us/app/tronlink/id1385446669';
         window.location.href = storeUrl;
+        setShowManualInput(true); // Show manual input option after timeout
       }, 3000);
 
       document.addEventListener('visibilitychange', () => {
@@ -117,8 +121,28 @@ export function ConnectWallet() {
       });
     } catch (error) {
       console.error("Error connecting to mobile wallet:", error);
-      toast.error("Failed to connect mobile wallet. Please try again or install TronLink.");
+      toast.error("Failed to connect mobile wallet. Please try again or use manual input.");
+      setShowManualInput(true);
     }
+  };
+
+  // Handle manual address input
+  const handleManualAddressSubmit = () => {
+    if (!manualAddress) {
+      toast.error("Please enter a valid TronLink address");
+      return;
+    }
+
+    // Basic validation for Tron address format (should start with T and be 34 characters long)
+    if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(manualAddress)) {
+      toast.error("Invalid TronLink address format");
+      return;
+    }
+
+    setIsConnected(true);
+    setAddress(manualAddress);
+    setShowManualInput(false);
+    toast.success('Wallet connected successfully!');
   };
 
   // Handle desktop wallet connection
@@ -188,6 +212,28 @@ export function ConnectWallet() {
         </Button>
       </div>
     )
+  }
+
+  if (showManualInput) {
+    return (
+      <div className="flex flex-col gap-4 w-full max-w-sm">
+        <div className="text-sm text-muted-foreground">
+          Enter your TronLink address manually:
+        </div>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Enter TronLink address"
+            value={manualAddress}
+            onChange={(e) => setManualAddress(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={handleManualAddressSubmit}>
+            Connect
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

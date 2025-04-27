@@ -359,10 +359,10 @@ export default function PlayPage() {
   };
 
   // Check if the current user has placed a bet on this game (available for future use)
-  const hasUserPlacedBet = (game: Game) => {
-    const userBets = filterUserBets(game);
-    return userBets.length > 0;
-  };
+  // const hasUserPlacedBet = (game: Game) => {
+  //   const userBets = filterUserBets(game);
+  //   return userBets.length > 0;
+  // };
 
   // Game card animation variants
   const cardVariants = {

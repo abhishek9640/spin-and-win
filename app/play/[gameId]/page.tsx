@@ -32,6 +32,9 @@ declare global {
   }
 }
 
+// Storage key constant for wallet address
+const STORED_WALLET_KEY = 'tronlink_wallet_address';
+
 // Define interfaces for the API response
 interface GameItem {
   name: string;
@@ -84,6 +87,14 @@ export default function GamePage() {
   useEffect(() => {
     const checkTronLink = async () => {
       if (typeof window !== 'undefined') {
+        // Check for stored address first
+        const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+        if (storedAddress) {
+          setIsConnected(true);
+          console.log('Using stored TronLink address:', storedAddress);
+          return;
+        }
+        
         // More robust TronLink detection
         const hasTronLink = !!window.tronWeb || !!window.tronLink;
         console.log('TronLink detection:', { 
@@ -107,7 +118,8 @@ export default function GamePage() {
             if (window.tronWeb.defaultAddress?.base58) {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
-              // setTronAddress(currentAddress);
+              // Save to localStorage
+              localStorage.setItem(STORED_WALLET_KEY, currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -219,6 +231,32 @@ export default function GamePage() {
 
   const connectWallet = async () => {
     try {
+      // Check if on mobile
+      const userAgent = navigator.userAgent || navigator.vendor;
+      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+      
+      if (isMobile) {
+        // On mobile, show manual address input prompt
+        const manualAddress = prompt('Enter your TronLink wallet address:');
+        
+        if (!manualAddress) {
+          toast.error('Please enter a valid TronLink address');
+          return;
+        }
+        
+        // Basic validation for Tron address format
+        if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(manualAddress)) {
+          toast.error('Invalid TronLink address format');
+          return;
+        }
+        
+        // Save to localStorage for persistence
+        localStorage.setItem(STORED_WALLET_KEY, manualAddress);
+        setIsConnected(true);
+        toast.success(`Wallet connected: ${manualAddress.slice(0, 8)}...${manualAddress.slice(-6)}`);
+        return;
+      }
+    
       if (!isTronLinkInstalled) {
         window.open('https://www.tronlink.org/', '_blank');
         toast('Please install TronLink wallet to continue');
@@ -235,7 +273,8 @@ export default function GamePage() {
           if (tronWebState) {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
-            // setTronAddress(currentAddress);
+            // Save to localStorage
+            localStorage.setItem(STORED_WALLET_KEY, currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {

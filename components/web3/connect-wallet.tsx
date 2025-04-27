@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { Wallet, User, Smartphone } from 'lucide-react'
+import { Wallet, User, Smartphone, Edit, Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSession } from "next-auth/react"
 import { toast } from 'sonner'
@@ -23,6 +23,9 @@ declare global {
   }
 }
 
+// Storage key constant
+const STORED_WALLET_KEY = 'tronlink_wallet_address'
+
 export function ConnectWallet() {
   const [isTronLinkInstalled, setIsTronLinkInstalled] = useState<boolean>(false)
   const [isConnected, setIsConnected] = useState<boolean>(false)
@@ -33,6 +36,7 @@ export function ConnectWallet() {
   const [isMobile, setIsMobile] = useState<boolean>(false)
   const [showManualInput, setShowManualInput] = useState<boolean>(false)
   const [manualAddress, setManualAddress] = useState<string>("")
+  const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false)
 
   // Check if device is mobile
   useEffect(() => {
@@ -42,6 +46,17 @@ export function ConnectWallet() {
       setIsMobile(mobileRegex.test(userAgent));
     };
     checkMobile();
+  }, []);
+
+  // Check for stored address first
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      if (storedAddress) {
+        setIsConnected(true);
+        setAddress(storedAddress);
+      }
+    }
   }, []);
 
   // Check if TronLink is installed and listen to account changes
@@ -57,6 +72,8 @@ export function ConnectWallet() {
             if (currentAddress) {
               setIsConnected(true)
               setAddress(currentAddress)
+              // Save to localStorage
+              localStorage.setItem(STORED_WALLET_KEY, currentAddress)
             }
           }
         } catch (error) {
@@ -75,9 +92,13 @@ export function ConnectWallet() {
           if (currentAddress) {
             setIsConnected(true)
             setAddress(currentAddress)
+            // Save to localStorage
+            localStorage.setItem(STORED_WALLET_KEY, currentAddress)
           } else {
             setIsConnected(false)
             setAddress("")
+            // Remove from localStorage
+            localStorage.removeItem(STORED_WALLET_KEY)
           }
         }
       })
@@ -142,6 +163,11 @@ export function ConnectWallet() {
     setIsConnected(true);
     setAddress(manualAddress);
     setShowManualInput(false);
+    setIsEditingAddress(false);
+    
+    // Save to localStorage for persistence
+    localStorage.setItem(STORED_WALLET_KEY, manualAddress);
+    
     toast.success('Wallet connected successfully!');
   };
 
@@ -169,6 +195,8 @@ export function ConnectWallet() {
               const currentAddress = window.tronWeb.defaultAddress.base58
               setIsConnected(true)
               setAddress(currentAddress)
+              // Save to localStorage
+              localStorage.setItem(STORED_WALLET_KEY, currentAddress)
               toast.success('Wallet connected successfully!')
             }
           } else {
@@ -192,16 +220,56 @@ export function ConnectWallet() {
   const disconnectWallet = () => {
     setIsConnected(false)
     setAddress("")
-    toast.info("To fully disconnect, please log out from your TronLink wallet.")
+    // Clear from localStorage
+    localStorage.removeItem(STORED_WALLET_KEY)
+    toast.info("Wallet disconnected.")
+  }
+
+  // Toggle editing address
+  const toggleEditAddress = () => {
+    if (isEditingAddress) {
+      setIsEditingAddress(false);
+    } else {
+      setIsEditingAddress(true);
+      setManualAddress(address); // Pre-fill with current address
+    }
   }
 
   if (isConnected && address) {
     return (
       <div className="flex items-center gap-4">
-        <span className="text-sm text-muted-foreground flex items-center">
-          <User className="w-4 h-4 mr-2" />
-          {username || `User_${address.slice(0, 4)}`}
-        </span>
+        {isEditingAddress ? (
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter TronLink address"
+              value={manualAddress}
+              onChange={(e) => setManualAddress(e.target.value)}
+              className="w-56"
+            />
+            <Button onClick={handleManualAddressSubmit} size="icon">
+              <Check className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <span className="text-sm text-muted-foreground flex items-center">
+              <User className="w-4 h-4 mr-2" />
+              {username || `User_${address.slice(0, 4)}`}
+            </span>
+            <span className="text-sm truncate max-w-[140px]" title={address}>
+              {address.slice(0, 6)}...{address.slice(-4)}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleEditAddress}
+              className="h-8 w-8"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </>
+        )}
         <Button 
           variant="outline" 
           onClick={disconnectWallet}

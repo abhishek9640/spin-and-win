@@ -7,6 +7,9 @@ import { mainnet } from 'wagmi/chains'
 import { injected } from 'wagmi/connectors'
 import { useEffect, useState } from 'react'
 
+// Storage key constant for wallet address
+const STORED_WALLET_KEY = 'tronlink_wallet_address';
+
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || ''
 
 const metadata = {
@@ -47,11 +50,39 @@ if (typeof window !== 'undefined') {
   })
 }
 
+// Helper function to check if TronLink is installed
+const isTronLinkInstalled = () => {
+  return typeof window !== 'undefined' && (!!window.tronWeb || !!window.tronLink);
+};
+
 export function Web3Provider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+    
+    // Check for TronLink connection on mount
+    const checkTronLinkConnection = () => {
+      if (isTronLinkInstalled() && window.tronWeb?.defaultAddress?.base58) {
+        // If TronLink is connected, store the address
+        localStorage.setItem(STORED_WALLET_KEY, window.tronWeb.defaultAddress.base58);
+      }
+    };
+    
+    checkTronLinkConnection();
+    
+    // Setup event listener for TronLink account changes
+    const handleTronLinkAccountChange = (e: MessageEvent) => {
+      if (e.data?.message?.action === "accountsChanged") {
+        checkTronLinkConnection();
+      }
+    };
+    
+    window.addEventListener('message', handleTronLinkAccountChange);
+    
+    return () => {
+      window.removeEventListener('message', handleTronLinkAccountChange);
+    };
   }, [])
 
   return (

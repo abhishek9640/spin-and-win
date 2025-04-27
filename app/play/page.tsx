@@ -344,6 +344,26 @@ export default function PlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session?.user?.authToken]);
 
+  // Filter bets to only show the current user's bets
+  const filterUserBets = (game: Game) => {
+    if (!game.bets || !session?.user) return [];
+    
+    // Access session user id safely 
+    const userId = typeof session.user === 'object' && 'id' in session.user 
+      ? session.user.id as string
+      : undefined;
+    
+    if (!userId) return [];
+    
+    return game.bets.filter(bet => bet.userId === userId);
+  };
+
+  // Check if the current user has placed a bet on this game (available for future use)
+  const hasUserPlacedBet = (game: Game) => {
+    const userBets = filterUserBets(game);
+    return userBets.length > 0;
+  };
+
   // Game card animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -421,10 +441,13 @@ export default function PlayPage() {
             {/* Round 2 Qualification Banner */}
             {games.some(game => game.round === 2 && game.status !== 'completed') && (() => {
               // Find the user's bet on a Round 1 game
-              const round1Game = games.find(g => g.round === 1 && g.bets && g.bets.length > 0);
+              const round1Game = games.find(g => g.round === 1 && filterUserBets(g).length > 0);
               let betAmount = null;
-              if (round1Game && round1Game.bets && round1Game.bets.length > 0) {
-                betAmount = round1Game.bets[0].amount;
+              if (round1Game) {
+                const userBets = filterUserBets(round1Game);
+                if (userBets.length > 0) {
+                  betAmount = userBets[0].amount;
+                }
               }
               const winAmount = betAmount ? (betAmount * 5).toFixed(2) : null;
               return (
@@ -517,105 +540,12 @@ export default function PlayPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {games
                       .filter(game => game.round !== 2)
-                      .map((game, i) => (
-                        <motion.div
-                          key={game._id}
-                          variants={cardVariants}
-                          initial="hidden"
-                          animate="visible"
-                          transition={{ delay: i * 0.1 }}
-                        >
-                          <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                            {game.imageUrl && (
-                              <div className="aspect-video w-full overflow-hidden">
-                                <Image
-                                  src={game.imageUrl}
-                                  alt={game.name || 'Game'}
-                                  width={400}
-                                  height={225}
-                                  className="w-full h-full object-cover transition-transform hover:scale-105"
-                                />
-                              </div>
-                            )}
-                            <CardHeader>
-                              <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
-                              <CardDescription>
-                                {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                              {/* Display user's bet if available - only for non-qualified games */}
-                              {game.bets && game.bets.length > 0 && game.round !== 2 ? (
-                                <ResultCard
-                                  gameTitle={game.name || `Game ${game._id.slice(-4)}`}
-                                  luckyNumber={JSON.parse(game.bets[0].item).name}
-                                  status={game.status === 'completed' ? 'completed' : 'waiting'}
-                                  timestamp={new Date(game.createdAt || Date.now())}
-                                />
-                              ) : (
-                                <>
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <Coins className="h-4 w-4 text-primary" />
-                                    <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
-                                  </div>
-                                  <div className="mt-2 text-sm text-muted-foreground">
-                                    {game.items?.length} possible outcomes
-                                  </div>
-                                  {/* Conditional Display for Round or Winners */}
-                                  {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
-                                    <div className="mt-4 space-y-2">
-                                      <div className="text-sm font-medium text-green-600">Winners</div>
-                                      {game.winners.map((winner, index) => (
-                                        <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
-                                          <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
-                                          <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : game.round !== undefined && game.round !== 2 ? (
-                                    <>
-                                      <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
-                                        Round {game.round}
-                                      </span>
-                                    </>
-                                  ) : null}
-                                </>
-                              )}
-                            </CardContent>
-
-                            <CardFooter>
-                              {game.status !== 'completed' ? (
-                                game.bets && game.bets.length > 0 && game.round !== 2 ? (
-                                  <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
-                                    Bet Already Placed
-                                  </div>
-                                ) : (
-                                  <Button className="w-full" asChild>
-                                    <Link href={`/play/${game._id}`}>Play Now</Link>
-                                  </Button>
-                                )
-                              ) : (
-                                <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
-                                  Game Completed
-                                </div>
-                              )}
-                            </CardFooter>
-                          </Card>
-                        </motion.div>
-                      ))}
-                  </div>
-                </div>
-                
-                {/* Round 2 Qualified Games Section */}
-                {games.some(game => game.round === 2) && (
-                  <div className="mb-10">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center mt-10">
-                      Your Qualified Games
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {games
-                        .filter(game => game.round === 2)
-                        .map((game, i) => (
+                      .map((game, i) => {
+                        // Get user-specific bets for this game
+                        const userBets = filterUserBets(game);
+                        const userHasBet = userBets.length > 0;
+                        
+                        return (
                           <motion.div
                             key={game._id}
                             variants={cardVariants}
@@ -623,12 +553,9 @@ export default function PlayPage() {
                             animate="visible"
                             transition={{ delay: i * 0.1 }}
                           >
-                            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-purple-500 transform hover:-translate-y-1 h-full flex flex-col">
+                            <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
                               {game.imageUrl && (
-                                <div className="aspect-video w-full overflow-hidden relative">
-                                  <div className="absolute top-2 right-2 z-10">
-                                    <Badge className="bg-purple-600">VIP GAME</Badge>
-                                  </div>
+                                <div className="aspect-video w-full overflow-hidden">
                                   <Image
                                     src={game.imageUrl}
                                     alt={game.name || 'Game'}
@@ -646,10 +573,10 @@ export default function PlayPage() {
                               </CardHeader>
                               <CardContent className="flex-grow">
                                 {/* Display user's bet if available - only for non-qualified games */}
-                                {game.bets && game.bets.length > 0 && game.round !== 2 ? (
+                                {userHasBet ? (
                                   <ResultCard
                                     gameTitle={game.name || `Game ${game._id.slice(-4)}`}
-                                    luckyNumber={JSON.parse(game.bets[0].item).name}
+                                    luckyNumber={JSON.parse(userBets[0].item).name}
                                     status={game.status === 'completed' ? 'completed' : 'waiting'}
                                     timestamp={new Date(game.createdAt || Date.now())}
                                   />
@@ -673,20 +600,20 @@ export default function PlayPage() {
                                           </div>
                                         ))}
                                       </div>
-                                    ) : (
-                                      <div className="mt-4">
-                                        <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
-                                          Round 2 Qualified
+                                    ) : game.round !== undefined && game.round !== 2 ? (
+                                      <>
+                                        <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
+                                          Round {game.round}
                                         </span>
-                                      </div>
-                                    )}
+                                      </>
+                                    ) : null}
                                   </>
                                 )}
                               </CardContent>
 
                               <CardFooter>
                                 {game.status !== 'completed' ? (
-                                  game.bets && game.bets.length > 0 && game.round !== 2 ? (
+                                  userHasBet ? (
                                     <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
                                       Bet Already Placed
                                     </div>
@@ -703,7 +630,115 @@ export default function PlayPage() {
                               </CardFooter>
                             </Card>
                           </motion.div>
-                        ))}
+                        );
+                      })}
+                  </div>
+                </div>
+                
+                {/* Round 2 Qualified Games Section */}
+                {games.some(game => game.round === 2) && (
+                  <div className="mb-10">
+                    <h2 className="text-2xl font-bold mb-4 flex items-center mt-10">
+                      Your Qualified Games
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {games
+                        .filter(game => game.round === 2)
+                        .map((game, i) => {
+                          // Get user-specific bets for this game
+                          const userBets = filterUserBets(game);
+                          const userHasBet = userBets.length > 0;
+                          
+                          return (
+                            <motion.div
+                              key={game._id}
+                              variants={cardVariants}
+                              initial="hidden"
+                              animate="visible"
+                              transition={{ delay: i * 0.1 }}
+                            >
+                              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-purple-500 transform hover:-translate-y-1 h-full flex flex-col">
+                                {game.imageUrl && (
+                                  <div className="aspect-video w-full overflow-hidden relative">
+                                    <div className="absolute top-2 right-2 z-10">
+                                      <Badge className="bg-purple-600">VIP GAME</Badge>
+                                    </div>
+                                    <Image
+                                      src={game.imageUrl}
+                                      alt={game.name || 'Game'}
+                                      width={400}
+                                      height={225}
+                                      className="w-full h-full object-cover transition-transform hover:scale-105"
+                                    />
+                                  </div>
+                                )}
+                                <CardHeader>
+                                  <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                                  <CardDescription>
+                                    {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                  {/* Display user's bet if available */}
+                                  {userHasBet ? (
+                                    <ResultCard
+                                      gameTitle={game.name || `Game ${game._id.slice(-4)}`}
+                                      luckyNumber={JSON.parse(userBets[0].item).name}
+                                      status={game.status === 'completed' ? 'completed' : 'waiting'}
+                                      timestamp={new Date(game.createdAt || Date.now())}
+                                    />
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Coins className="h-4 w-4 text-primary" />
+                                        <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                                      </div>
+                                      <div className="mt-2 text-sm text-muted-foreground">
+                                        {game.items?.length} possible outcomes
+                                      </div>
+                                      {/* Conditional Display for Round or Winners */}
+                                      {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                                        <div className="mt-4 space-y-2">
+                                          <div className="text-sm font-medium text-green-600">Winners</div>
+                                          {game.winners.map((winner, index) => (
+                                            <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
+                                              <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
+                                              <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="mt-4">
+                                          <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
+                                            Round 2 Qualified
+                                          </span>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </CardContent>
+
+                                <CardFooter>
+                                  {game.status !== 'completed' ? (
+                                    userHasBet ? (
+                                      <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
+                                        Bet Already Placed
+                                      </div>
+                                    ) : (
+                                      <Button className="w-full" asChild>
+                                        <Link href={`/play/${game._id}`}>Play Now</Link>
+                                      </Button>
+                                    )
+                                  ) : (
+                                    <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
+                                      Game Completed
+                                    </div>
+                                  )}
+                                </CardFooter>
+                              </Card>
+                            </motion.div>
+                          );
+                        })}
                     </div>
                   </div>
                 )}

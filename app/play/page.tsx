@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { motion } from 'framer-motion'
+import { ResultCard } from '@/components/game/ResultCard'
 
 // Define TronLink types
 declare global {
@@ -43,6 +44,15 @@ interface Winner {
   amountWon: number;
 }
 
+interface Bet {
+  userId: string;
+  amount: number;
+  item: string;
+  transaction_id: string;
+  round_count: number;
+  _id: string;
+}
+
 interface Game {
   _id: string;
   name?: string;
@@ -55,6 +65,7 @@ interface Game {
   items: GameItem[];
   round?: number;
   winners?: Winner[];
+  bets?: Bet[];
 }
 
 interface GamesResponse {
@@ -260,11 +271,11 @@ export default function PlayPage() {
       <Header />
 
       {/* Hero Banner */}
-      <div className="relative min-h-[500px] bg-gradient-to-r from-black to-gray-900 py-12 lg:py-0">
+      {/* <div className="relative min-h-[500px] bg-gradient-to-r from-black to-gray-900 py-12 lg:py-0">
         <div className="container mx-auto px-4 h-full">
-          <div className="flex flex-col lg:flex-row items-center justify-between h-full gap-8">
+          <div className="flex flex-col lg:flex-row items-center justify-between h-full gap-8"> */}
             {/* Left Content */}
-            <div className="w-full lg:w-1/2 text-center lg:text-left">
+            {/* <div className="w-full lg:w-1/2 text-center lg:text-left">
               <motion.h1
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -307,10 +318,10 @@ export default function PlayPage() {
                   </Button>
                 )}
               </motion.div>
-            </div>
+            </div> */}
 
             {/* Right Image */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
@@ -326,7 +337,7 @@ export default function PlayPage() {
             </motion.div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <main className="container mx-auto px-4 py-8 lg:py-12">
         <div id="games" className="scroll-mt-16">
@@ -355,31 +366,52 @@ export default function PlayPage() {
 
 
           {/* Round 2 Qualification Banner */}
-          {games.some(game => game.round === 2 && game.status !== 'completed') && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg text-white"
-            >
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center">
-                  <div className="mr-4 bg-white bg-opacity-20 p-3 rounded-full">
-                    <Trophy className="h-8 w-8" />
+          {games.some(game => game.round === 2 && game.status !== 'completed') && (() => {
+            // Find the user's bet on a Round 1 game
+            const round1Game = games.find(g => g.round === 1 && g.bets && g.bets.length > 0);
+            let betAmount = null;
+            if (round1Game && round1Game.bets && round1Game.bets.length > 0) {
+              betAmount = round1Game.bets[0].amount;
+            }
+            const winAmount = betAmount ? (betAmount * 5).toFixed(2) : null;
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg text-white"
+              >
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center">
+                    <div className="mr-4 bg-white bg-opacity-20 p-3 rounded-full">
+                      <Trophy className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
+                      <p className="text-white text-opacity-90 max-w-xl">
+                        You&apos;ve qualified for Round 2 exclusive games with higher stakes and bigger rewards.<br />
+                        {betAmount && winAmount && (
+                          <>
+                            <span className="block mt-2 text-lg font-semibold text-yellow-200">You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> (5x your bet of {betAmount} USDT)!</span>
+                            <span className="block mt-2">You can <span className="font-bold">opt out</span> and take your winnings, or <span className="font-bold">play for Round 2</span> to 25x your amount!</span>
+                            <div className="flex gap-4 mt-4">
+                              <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">Opt Out &amp; Take Winnings</Button>
+                              <Button className="bg-purple-700 text-white font-bold hover:bg-purple-800">Play Round 2</Button>
+                            </div>
+                          </>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
-                    <p className="text-white text-opacity-90 max-w-xl">You&apos;ve qualified for Round 2 exclusive games with higher stakes and bigger rewards. These special games are only available to our most valued players!</p>
+                  <div className="hidden md:block">
+                    <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/50 text-sm px-4 py-2">
+                      VIP PLAYER STATUS
+                    </Badge>
                   </div>
                 </div>
-                <div className="hidden md:block">
-                  <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/50 text-sm px-4 py-2">
-                    VIP PLAYER STATUS
-                  </Badge>
-                </div>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            );
+          })()}
 
           {/* Authentication Check */}
           {sessionStatus === 'unauthenticated' && (
@@ -476,38 +508,56 @@ export default function PlayPage() {
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="flex-grow">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Coins className="h-4 w-4 text-primary" />
-                              <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
-                            </div>
-                            <div className="mt-2 text-sm text-muted-foreground">
-                              {game.items?.length} possible outcomes
-                            </div>
-                            {/* Conditional Display for Round or Winners */}
-                            {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
-                              <div className="mt-4 space-y-2">
-                                <div className="text-sm font-medium text-green-600">Winners</div>
-                                {game.winners.map((winner, index) => (
-                                  <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
-                                    <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
-                                    <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : game.round !== undefined && game.round !== 2 ? (
+                            {/* Display user's bet if available - only for non-qualified games */}
+                            {game.bets && game.bets.length > 0 && game.round !== 2 ? (
+                              <ResultCard
+                                gameTitle={game.name || `Game ${game._id.slice(-4)}`}
+                                luckyNumber={JSON.parse(game.bets[0].item).name}
+                                status={game.status === 'completed' ? 'completed' : 'waiting'}
+                                timestamp={new Date(game.createdAt || Date.now())}
+                              />
+                            ) : (
                               <>
-                                <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
-                                  Round {game.round}
-                                </span>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Coins className="h-4 w-4 text-primary" />
+                                  <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                                </div>
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                  {game.items?.length} possible outcomes
+                                </div>
+                                {/* Conditional Display for Round or Winners */}
+                                {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                                  <div className="mt-4 space-y-2">
+                                    <div className="text-sm font-medium text-green-600">Winners</div>
+                                    {game.winners.map((winner, index) => (
+                                      <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
+                                        <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
+                                        <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : game.round !== undefined && game.round !== 2 ? (
+                                  <>
+                                    <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
+                                      Round {game.round}
+                                    </span>
+                                  </>
+                                ) : null}
                               </>
-                            ) : null}
+                            )}
                           </CardContent>
 
                           <CardFooter>
                             {game.status !== 'completed' ? (
-                              <Button className="w-full" asChild>
-                                <Link href={`/play/${game._id}`}>Play Now</Link>
-                              </Button>
+                              game.bets && game.bets.length > 0 && game.round !== 2 ? (
+                                <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
+                                  Bet Already Placed
+                                </div>
+                              ) : (
+                                <Button className="w-full" asChild>
+                                  <Link href={`/play/${game._id}`}>Play Now</Link>
+                                </Button>
+                              )
                             ) : (
                               <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
                                 Game Completed
@@ -561,37 +611,56 @@ export default function PlayPage() {
                               </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
-                              <div className="flex items-center gap-2 text-sm">
-                                <Coins className="h-4 w-4 text-primary" />
-                                <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
-                              </div>
-                              <div className="mt-2 text-sm text-muted-foreground">
-                                {game.items?.length} possible outcomes
-                              </div>
-                              {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
-                                <div className="mt-4 space-y-2">
-                                  <div className="text-sm font-medium text-green-600">Winners</div>
-                                  {game.winners.map((winner, index) => (
-                                    <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
-                                      <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
-                                      <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
-                                    </div>
-                                  ))}
-                                </div>
+                              {/* Display user's bet if available - only for non-qualified games */}
+                              {game.bets && game.bets.length > 0 && game.round !== 2 ? (
+                                <ResultCard
+                                  gameTitle={game.name || `Game ${game._id.slice(-4)}`}
+                                  luckyNumber={JSON.parse(game.bets[0].item).name}
+                                  status={game.status === 'completed' ? 'completed' : 'waiting'}
+                                  timestamp={new Date(game.createdAt || Date.now())}
+                                />
                               ) : (
-                                <div className="mt-4">
-                                  <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
-                                    Round 2 Qualified
-                                  </span>
-                                </div>
+                                <>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Coins className="h-4 w-4 text-primary" />
+                                    <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                                  </div>
+                                  <div className="mt-2 text-sm text-muted-foreground">
+                                    {game.items?.length} possible outcomes
+                                  </div>
+                                  {/* Conditional Display for Round or Winners */}
+                                  {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                                    <div className="mt-4 space-y-2">
+                                      <div className="text-sm font-medium text-green-600">Winners</div>
+                                      {game.winners.map((winner, index) => (
+                                        <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
+                                          <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
+                                          <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="mt-4">
+                                      <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
+                                        Round 2 Qualified
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </CardContent>
 
                             <CardFooter>
                               {game.status !== 'completed' ? (
-                                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" asChild>
-                                  <Link href={`/play/${game._id}`}>Play Now</Link>
-                                </Button>
+                                game.bets && game.bets.length > 0 && game.round !== 2 ? (
+                                  <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
+                                    Bet Already Placed
+                                  </div>
+                                ) : (
+                                  <Button className="w-full" asChild>
+                                    <Link href={`/play/${game._id}`}>Play Now</Link>
+                                  </Button>
+                                )
                               ) : (
                                 <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
                                   Game Completed

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, Shield, Info, AlertCircle, CheckCircle, LockKeyhole, Coins, Trophy } from 'lucide-react'
+import { Loader2, ArrowLeft, Info, AlertCircle, CheckCircle, LockKeyhole, Coins} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
@@ -69,14 +69,14 @@ export default function GamePage() {
   const [selectedItem, setSelectedItem] = useState<GameItem | null>(null);
   const [betAmount, setBetAmount] = useState<string>('');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
-  const [showSecurityInfo, setShowSecurityInfo] = useState(false);
+  // const [showSecurityInfo, setShowSecurityInfo] = useState(false);
   const [betPlaced, setBetPlaced] = useState(false);
   const [betDetails, setBetDetails] = useState<{amount: string; item: string; timestamp: string} | null>(null);
-  const [recentWinners] = useState([
-    { name: "Alex", item: "7", amount: 240.50 },
-    { name: "Jessica", item: "21", amount: 450.75 },
-    { name: "Michael", item: "12", amount: 120.25 },
-  ]);
+      // const [recentWinners] = useState([
+      //   { name: "Alex", item: "7", amount: 240.50 },
+      //   { name: "Jessica", item: "21", amount: 450.75 },
+      //   { name: "Michael", item: "12", amount: 120.25 },
+      // ]);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://spinwin.shreyanshkataria.com';
 
@@ -681,7 +681,7 @@ export default function GamePage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Security Information */}
-            <Card>
+            {/* <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center">
                   <Shield className="h-5 w-5 mr-2 text-primary" />
@@ -730,10 +730,10 @@ export default function GamePage() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
             
             {/* Recent Winners */}
-            <Card>
+            {/* <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center">
                   <Trophy className="h-5 w-5 mr-2 text-amber-500" />
@@ -758,10 +758,10 @@ export default function GamePage() {
                   View All Winners
                 </Button>
               </CardFooter>
-            </Card>
+            </Card> */}
             
             {/* Need Help? */}
-            <Card>
+            {/* <Card>
               <CardHeader className="pb-3">
                 <CardTitle>Need Help?</CardTitle>
               </CardHeader>
@@ -773,7 +773,7 @@ export default function GamePage() {
                   Contact Support
                 </Button>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

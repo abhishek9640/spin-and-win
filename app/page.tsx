@@ -1,8 +1,3 @@
-'use client'
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -10,84 +5,8 @@ import { Coins, Zap, Shield, Sparkles, CheckCircle, AlertCircle, Award, Repeat, 
 import { WalletAddressSync } from "@/components/WalletAddressSync"
 import Link from 'next/link'
 import Image from 'next/image'
-import { toast } from 'sonner'
-
-// Define interfaces for the API response
-interface GameItem {
-  name: string;
-  odds: number;
-  _id: string;
-}
-
-interface Bet {
-  userId: string;
-  amount: number;
-  item: string;
-  transaction_id: string;
-  round_count: number;
-  _id: string;
-}
-
-interface Game {
-  _id: string;
-  name?: string;
-  description?: string;
-  minBet?: number;
-  maxBet?: number;
-  status?: 'active' | 'inactive' | 'completed';
-  createdAt?: string;
-  imageUrl?: string;
-  items: GameItem[];
-  round?: number;
-  bets?: Bet[];
-}
 
 export default function Home() {
-  const router = useRouter();
-  const { data: session, status: sessionStatus } = useSession();
-  const [loading, setLoading] = useState(false);
-  
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://spinwin.shreyanshkataria.com';
-
-  const handleStartPlaying = async () => {
-    if (sessionStatus === 'unauthenticated') {
-      router.push('/api/auth/signin');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/v1/game/fetch-games`, {
-        headers: {
-          'Authorization': `${session?.user?.authToken}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch games');
-      }
-
-      const data = await response.json();
-      
-      // Find the first active game that's not completed
-      const activeGame = data.data.records.find(
-        (game: Game) => game.status !== 'completed' && (!game.bets || game.bets.length === 0)
-      );
-
-      if (activeGame) {
-        router.push(`/play/${activeGame._id}`);
-      } else {
-        router.push('/play'); // Fallback to games list if no active game found
-      }
-    } catch (error) {
-      console.error('Error fetching games:', error);
-      toast.error('Failed to load games. Please try again.');
-      router.push('/play');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/90 text-foreground">
       <WalletAddressSync />
@@ -163,14 +82,11 @@ export default function Home() {
               
             </div>
             <div className="flex flex-col sm:flex-row gap-5 justify-center">
-              <Button 
-                size="lg" 
-                onClick={handleStartPlaying}
-                disabled={loading}
-                className="w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-yellow-600 text-black hover:from-yellow-500 hover:to-yellow-700"
-              >
-                {loading ? 'Loading...' : 'Start Playing'}
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button size="lg" className="text-lg px-8 py-6" asChild>
+                <Link href="/play">
+                  <span>Start Playing</span>
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6">
                 Learn More

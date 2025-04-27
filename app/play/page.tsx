@@ -269,6 +269,23 @@ export default function PlayPage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 text-foreground">
       <WalletAddressSync />
       <Header />
+      <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="relative w-full lg:w-[400px] aspect-square rounded-xl overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-black/20 z-10" />
+              <video
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              >
+                <source src="/coin.mp4" type="video/mp4" />
+              </video>
+            </motion.div>
 
       {/* Hero Banner */}
       {/* <div className="relative min-h-[500px] bg-gradient-to-r from-black to-gray-900 py-12 lg:py-0">
@@ -396,7 +413,7 @@ export default function PlayPage() {
                             <span className="block mt-2">You can <span className="font-bold">opt out</span> and take your winnings, or <span className="font-bold">play for Round 2</span> to 25x your amount!</span>
                             <div className="flex gap-4 mt-4">
                               <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">Opt Out &amp; Take Winnings</Button>
-                              <Button className="bg-purple-700 text-white font-bold hover:bg-purple-800">Play Round 2</Button>
+                              <Button className="bg-purple-700 text-white font-bold hover:bg-purple-800">WIN 25X</Button>
                             </div>
                           </>
                         )}

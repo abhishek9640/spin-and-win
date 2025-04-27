@@ -61,7 +61,7 @@ export default function GamePage() {
   
   const [isTronLinkInstalled, setIsTronLinkInstalled] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [tronAddress, setTronAddress] = useState<string>("");
+  // const [tronAddress, setTronAddress] = useState<string>("");
   
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +107,7 @@ export default function GamePage() {
             if (window.tronWeb.defaultAddress?.base58) {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
-              setTronAddress(currentAddress);
+              // setTronAddress(currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -235,7 +235,7 @@ export default function GamePage() {
           if (tronWebState) {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
-            setTronAddress(currentAddress);
+            // setTronAddress(currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {
@@ -395,84 +395,83 @@ export default function GamePage() {
       <Header />
       
       {/* Game Header */}
-      <div className="relative bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 py-8 mb-8">
-        <div className="absolute inset-0 opacity-20 bg-[url('/patterns/noise.png')] mix-blend-overlay"></div>
+      <div className="relative bg-black py-12 mb-8">
+        <div className="absolute inset-0 opacity-5 bg-[url('/patterns/noise.png')] mix-blend-overlay"></div>
         <div className="container mx-auto px-4 relative z-10">
-          <Button variant="outline" size="sm" asChild className="mb-4 bg-white/20 text-white border-white/30 hover:bg-white/30 hover:text-white">
+          <Button variant="ghost" size="sm" asChild className="mb-6 text-white/70 hover:text-white hover:bg-white/5">
             <Link href="/play">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Games
             </Link>
           </Button>
 
-          <div className="w-full lg:w-1/2 text-center lg:text-left">
-              <motion.h1
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 drop-shadow-lg"
-              >
-                JACKPOT
-                <span className="block text-3xl md:text-4xl lg:text-5xl mt-2 bg-gradient-to-r from-blue-400 to-blue-600 text-transparent bg-clip-text">WIN UPTO 25 TIMES</span>
-              </motion.h1>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="flex flex-wrap justify-center lg:justify-start gap-4"
-              >
-              </motion.div>
-            </div>
-          
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            {/* <div className="w-full lg:w-1/2">
               <motion.h1 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="text-3xl md:text-4xl font-bold text-white"
+                className="text-4xl md:text-5xl font-bold text-white"
               >
                 {game.name || `Game ${game._id ? game._id.slice(-4) : 'Unknown'}`}
               </motion.h1>
+              
+              <div className="flex flex-wrap gap-3 mt-4">
+                {game.round === 2 && (
+                  <Badge className="bg-yellow-500 text-black font-semibold">VIP ROUND 2</Badge>
+                )}
+                <Badge variant="outline" className="text-white/80 border-white/10 bg-white/5">
+                  {game.items?.length || 0} possible outcomes
+                </Badge>
+                <Badge variant="outline" className="text-white/80 border-white/10 bg-white/5">
+                  Min bet: {game.minBet || 2} USDT
+                </Badge>
+              </div>
               
               {game.description && (
                 <motion.p 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 }}
-                  className="text-white/80 mt-2 max-w-xl"
+                  className="text-gray-400 mt-3 max-w-xl"
                 >
                   {game.description}
                 </motion.p>
               )}
-              
-              <div className="flex flex-wrap gap-3 mt-3">
-                {game.round === 2 && (
-                  <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white">VIP ROUND 2</Badge>
-                )}
-                <Badge variant="outline" className="text-white border-white/50 bg-white/10">
-                  {game.items?.length || 0} possible outcomes
-                </Badge>
-                <Badge variant="outline" className="text-white border-white/50 bg-white/10">
-                  Min bet: {game.minBet || 2} USDT
-                </Badge>
-              </div>
-            </div>
-            
-            {isConnected && tronAddress ? (
-              <div className="mt-4 md:mt-0 bg-green-900/30 text-green-100 rounded-full px-4 py-2 flex items-center">
-                <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                Wallet connected: {tronAddress.slice(0, 8)}...{tronAddress.slice(-6)}
-              </div>
-            ) : (
-              <Button
-                onClick={connectWallet}
-                className="mt-4 md:mt-0 bg-white text-indigo-900 hover:bg-white/90"
+
+              {isConnected && tronAddress ? (
+                <div className="mt-6 bg-green-900/20 text-green-400 rounded-md px-4 py-3 flex items-center border border-green-900/30">
+                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                  Wallet connected: {tronAddress.slice(0, 8)}...{tronAddress.slice(-6)}
+                </div>
+              ) : (
+                <Button
+                  onClick={connectWallet}
+                  className="mt-6 bg-green-700 hover:bg-green-600 text-white"
+                >
+                  <LockKeyhole className="h-4 w-4 mr-2" />
+                  {isTronLinkInstalled ? 'Connect Wallet' : 'Install TronLink'}
+                </Button>
+              )}
+            </div> */}
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="relative w-full lg:w-[400px] aspect-square rounded-xl overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-black/20 z-10" />
+              <video
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
               >
-                <LockKeyhole className="h-4 w-4 mr-2" />
-                {isTronLinkInstalled ? 'Connect Wallet' : 'Install TronLink'}
-              </Button>
-            )}
+                <source src="/coin.mp4" type="video/mp4" />
+              </video>
+            </motion.div>
           </div>
         </div>
       </div>

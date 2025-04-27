@@ -32,9 +32,6 @@ declare global {
   }
 }
 
-// Storage key constant for wallet address
-const STORED_WALLET_KEY = 'tronlink_wallet_address';
-
 // Define interfaces for the API response
 interface GameItem {
   name: string;
@@ -64,7 +61,7 @@ export default function GamePage() {
   
   const [isTronLinkInstalled, setIsTronLinkInstalled] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  // const [tronAddress, setTronAddress] = useState<string>("");
+  const [tronAddress, setTronAddress] = useState<string>("");
   
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,12 +84,13 @@ export default function GamePage() {
   useEffect(() => {
     const checkTronLink = async () => {
       if (typeof window !== 'undefined') {
-        // Check for stored address first
-        const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+        // Check for stored wallet address first
+        const storedAddress = localStorage.getItem('tronlink_wallet_address');
         if (storedAddress) {
           setIsConnected(true);
+          setTronAddress(storedAddress);
           console.log('Using stored TronLink address:', storedAddress);
-          return;
+          return; // Skip further checks if we have a stored address
         }
         
         // More robust TronLink detection
@@ -118,8 +116,7 @@ export default function GamePage() {
             if (window.tronWeb.defaultAddress?.base58) {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
-              // Save to localStorage
-              localStorage.setItem(STORED_WALLET_KEY, currentAddress);
+              setTronAddress(currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -231,32 +228,6 @@ export default function GamePage() {
 
   const connectWallet = async () => {
     try {
-      // Check if on mobile
-      const userAgent = navigator.userAgent || navigator.vendor;
-      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-      
-      if (isMobile) {
-        // On mobile, show manual address input prompt
-        const manualAddress = prompt('Enter your TronLink wallet address:');
-        
-        if (!manualAddress) {
-          toast.error('Please enter a valid TronLink address');
-          return;
-        }
-        
-        // Basic validation for Tron address format
-        if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(manualAddress)) {
-          toast.error('Invalid TronLink address format');
-          return;
-        }
-        
-        // Save to localStorage for persistence
-        localStorage.setItem(STORED_WALLET_KEY, manualAddress);
-        setIsConnected(true);
-        toast.success(`Wallet connected: ${manualAddress.slice(0, 8)}...${manualAddress.slice(-6)}`);
-        return;
-      }
-    
       if (!isTronLinkInstalled) {
         window.open('https://www.tronlink.org/', '_blank');
         toast('Please install TronLink wallet to continue');
@@ -273,8 +244,7 @@ export default function GamePage() {
           if (tronWebState) {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
-            // Save to localStorage
-            localStorage.setItem(STORED_WALLET_KEY, currentAddress);
+            setTronAddress(currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {
@@ -433,86 +403,16 @@ export default function GamePage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-background/95 text-foreground">
       <Header />
       
-      {/* Game Header */}
-      <div className="relative bg-black py-12 mb-8">
-        <div className="absolute inset-0 opacity-5 bg-[url('/patterns/noise.png')] mix-blend-overlay"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <Button variant="ghost" size="sm" asChild className="mb-6 text-white/70 hover:text-white hover:bg-white/5">
-            <Link href="/play">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Games
-            </Link>
-          </Button>
-
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-            {/* <div className="w-full lg:w-1/2">
-              <motion.h1 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="text-4xl md:text-5xl font-bold text-white"
-              >
-                {game.name || `Game ${game._id ? game._id.slice(-4) : 'Unknown'}`}
-              </motion.h1>
-              
-              <div className="flex flex-wrap gap-3 mt-4">
-                {game.round === 2 && (
-                  <Badge className="bg-yellow-500 text-black font-semibold">VIP ROUND 2</Badge>
-                )}
-                <Badge variant="outline" className="text-white/80 border-white/10 bg-white/5">
-                  {game.items?.length || 0} possible outcomes
-                </Badge>
-                <Badge variant="outline" className="text-white/80 border-white/10 bg-white/5">
-                  Min bet: {game.minBet || 2} USDT
-                </Badge>
-              </div>
-              
-              {game.description && (
-                <motion.p 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                  className="text-gray-400 mt-3 max-w-xl"
-                >
-                  {game.description}
-                </motion.p>
-              )}
-
-              {isConnected && tronAddress ? (
-                <div className="mt-6 bg-green-900/20 text-green-400 rounded-md px-4 py-3 flex items-center border border-green-900/30">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  Wallet connected: {tronAddress.slice(0, 8)}...{tronAddress.slice(-6)}
-                </div>
-              ) : (
-                <Button
-                  onClick={connectWallet}
-                  className="mt-6 bg-green-700 hover:bg-green-600 text-white"
-                >
-                  <LockKeyhole className="h-4 w-4 mr-2" />
-                  {isTronLinkInstalled ? 'Connect Wallet' : 'Install TronLink'}
-                </Button>
-              )}
-            </div> */}
-
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="relative w-full lg:w-[400px] aspect-square rounded-xl overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-black/20 z-10" />
-              <video
-                className="w-full h-full object-cover"
-                autoPlay
-                loop
-                muted
-                playsInline
-              >
-                <source src="/coin.mp4" type="video/mp4" />
-              </video>
-            </motion.div>
-          </div>
-        </div>
+      {/* Video Header */}
+      <div className="w-full flex justify-center items-center py-8">
+        <video 
+          src="/coin.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full max-w-md h-auto"
+        />
       </div>
 
       <div className="container mx-auto px-4 pb-16">
@@ -586,6 +486,14 @@ export default function GamePage() {
                   </CardContent>
                 </Card>
               </motion.div>
+            )}
+            
+            {/* Display wallet status if connected */}
+            {isConnected && tronAddress && (
+              <div className="mb-6 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg p-4 flex items-center">
+                <CheckCircle className="h-5 w-5 mr-2 text-green-600 dark:text-green-400" />
+                <span>Wallet connected: {tronAddress.slice(0, 8)}...{tronAddress.slice(-6)}</span>
+              </div>
             )}
             
             {/* Betting Interface */}

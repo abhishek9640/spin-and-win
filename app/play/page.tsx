@@ -12,7 +12,6 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { motion } from 'framer-motion'
-import { ResultCard } from '@/components/game/ResultCard'
 
 // Define TronLink types
 declare global {
@@ -77,9 +76,6 @@ interface GamesResponse {
   success?: boolean;
 }
 
-// Storage key constant - must match the one in connect-wallet.tsx
-const STORED_WALLET_KEY = 'tronlink_wallet_address';
-
 // Testimonials data
 // const testimonials = [
 //   {
@@ -110,66 +106,13 @@ export default function PlayPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  // const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // Check if device is mobile
+  // Check TronLink connection
   useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = (navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera || '').toLowerCase();
-      const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-      setIsMobile(mobileRegex.test(userAgent));
-    };
-    checkMobile();
-  }, []);
-
-  // Check for stored wallet address in localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
-      if (storedAddress) {
-        setIsConnected(true);
-        setTronAddress(storedAddress);
-        console.log('Using stored wallet address:', storedAddress);
-      }
-    }
-
-    // Listen for storage changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORED_WALLET_KEY) {
-        if (e.newValue) {
-          setIsConnected(true);
-          setTronAddress(e.newValue);
-          console.log('Wallet address updated from storage:', e.newValue);
-        } else {
-          setIsConnected(false);
-          setTronAddress("");
-          console.log('Wallet address removed from storage');
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  // Check TronLink connection - only when authenticated
-  useEffect(() => {
-    if (sessionStatus !== 'authenticated') return;
-    
     const checkTronLink = async () => {
-      // Check if we already have a stored address
-      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
-      if (storedAddress) {
-        setIsConnected(true);
-        setTronAddress(storedAddress);
-        return; // Use stored address instead of checking TronWeb
-      }
-      
       if (typeof window !== 'undefined') {
         // More robust TronLink detection
         const hasTronLink = !!window.tronWeb || !!window.tronLink;
@@ -195,8 +138,6 @@ export default function PlayPage() {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
               setTronAddress(currentAddress);
-              // Store in localStorage
-              localStorage.setItem(STORED_WALLET_KEY, currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -210,11 +151,7 @@ export default function PlayPage() {
     checkTronLink();
 
     // Setup recurring checks in case TronLink loads after our component
-    const intervalId = setInterval(() => {
-      if (!isConnected) {
-        checkTronLink();
-      }
-    }, 1000);
+    const intervalId = setInterval(checkTronLink, 1000);
 
     // Add event listener for account changes
     const handleMessageEvent = (e: MessageEvent) => {
@@ -227,6 +164,7 @@ export default function PlayPage() {
       window.addEventListener('message', handleMessageEvent);
     }
 
+
     // Cleanup
     return () => {
       clearInterval(intervalId);
@@ -234,17 +172,11 @@ export default function PlayPage() {
         window.removeEventListener('message', handleMessageEvent);
       }
     };
-  }, [sessionStatus, isConnected]);
+  }, []);
 
   // Connect wallet function
   const connectWallet = async () => {
     try {
-      // For mobile devices, redirect to manual input page or show wallet address form
-      if (isMobile) {
-        window.location.href = '/wallet-connect';
-        return;
-      }
-      
       if (!isTronLinkInstalled) {
         window.open('https://www.tronlink.org/', '_blank');
         toast('Please install TronLink wallet to continue');
@@ -262,7 +194,6 @@ export default function PlayPage() {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
             setTronAddress(currentAddress);
-            localStorage.setItem(STORED_WALLET_KEY, currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {
@@ -275,23 +206,6 @@ export default function PlayPage() {
       toast.error('Failed to connect wallet. Please try again.');
     }
   };
-
-  // Periodically check for wallet address in localStorage
-  useEffect(() => {
-    // Only run this effect if not connected
-    if (isConnected) return;
-    
-    const intervalId = setInterval(() => {
-      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
-      if (storedAddress && storedAddress !== tronAddress) {
-        setIsConnected(true);
-        setTronAddress(storedAddress);
-        console.log('Found wallet address in localStorage:', storedAddress);
-      }
-    }, 2000);
-    
-    return () => clearInterval(intervalId);
-  }, [isConnected, tronAddress]);
 
   // Fetch games from the API
   const fetchGames = async () => {
@@ -344,26 +258,6 @@ export default function PlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, session?.user?.authToken]);
 
-  // Filter bets to only show the current user's bets
-  const filterUserBets = (game: Game) => {
-    if (!game.bets || !session?.user) return [];
-    
-    // Access session user id safely 
-    const userId = typeof session.user === 'object' && 'id' in session.user 
-      ? session.user.id as string
-      : undefined;
-    
-    if (!userId) return [];
-    
-    return game.bets.filter(bet => bet.userId === userId);
-  };
-
-  // Check if the current user has placed a bet on this game (available for future use)
-  // const hasUserPlacedBet = (game: Game) => {
-  //   const userBets = filterUserBets(game);
-  //   return userBets.length > 0;
-  // };
-
   // Game card animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -372,419 +266,365 @@ export default function PlayPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 text-foreground">
-      {sessionStatus === 'authenticated' && <WalletAddressSync />}
+      <WalletAddressSync />
       <Header />
-      
-      {/* Hero Section with Video */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex justify-center my-8"
-      >
-        <div className="relative w-full lg:w-[400px] aspect-square rounded-xl overflow-hidden">
-          <div className="absolute inset-0 bg-black/20 z-10" />
-          <video
-            className="w-full h-full object-cover"
-            autoPlay
-            loop
-            muted
-            playsInline
-          >
-            <source src="/coin.mp4" type="video/mp4" />
-          </video>
-        </div>
-      </motion.div>
+
+      {/* Hero Section with coin.mp4 */}
+      <div className="w-full flex justify-center items-center py-8">
+        <video 
+          src="/coin.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full max-w-md h-auto"
+        />
+      </div>
 
       <main className="container mx-auto px-4 py-8 lg:py-12">
-        {/* Authentication Check for Unauthenticated Users */}
-        {sessionStatus === 'unauthenticated' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center py-12 bg-primary/5 rounded-xl border border-primary/10"
-          >
-            <h2 className="text-2xl font-semibold mb-4">Please Sign In</h2>
-            <p className="mb-6 text-muted-foreground">You need to sign in to view and play games</p>
-            <Button asChild size="lg" className="px-8">
-              <Link href="/api/auth/signin">Sign In</Link>
-            </Button>
-          </motion.div>
-        )}
+        <div id="games" className="scroll-mt-16">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent text-center sm:text-left">
+             Games
+            </h1>
 
-        {/* Only Show Games Section When Authenticated */}
-        {sessionStatus === 'authenticated' && (
-          <div id="games" className="scroll-mt-16">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent text-center sm:text-left">
-                Games
-              </h1>
+            {isConnected && tronAddress ? (
+              <div className="text-sm bg-green-100 text-green-700 rounded-full px-4 py-2 flex items-center">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                <span className="hidden sm:inline">Wallet connected:</span> {tronAddress.slice(0, 4)}...{tronAddress.slice(-4)}
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={connectWallet}
+                className="flex items-center gap-2 border-primary w-full sm:w-auto"
+              >
+                <Wallet className="h-4 w-4" />
+                {isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
+              </Button>
+            )}
+          </div>
 
-              {isConnected && tronAddress ? (
-                <div className="text-sm bg-green-100 text-green-700 rounded-full px-4 py-2 flex items-center">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                  <span className="hidden sm:inline">Wallet connected:</span> {tronAddress.slice(0, 4)}...{tronAddress.slice(-4)}
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={connectWallet}
-                  className="flex items-center gap-2 border-primary w-full sm:w-auto"
-                >
-                  <Wallet className="h-4 w-4" />
-                  {isMobile ? 'Enter Wallet Address' : isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
-                </Button>
-              )}
-            </div>
 
-            {/* Round 2 Qualification Banner */}
-            {games.some(game => game.round === 2 && game.status !== 'completed') && (() => {
-              // Find the user's bet on a Round 1 game
-              const round1Game = games.find(g => g.round === 1 && filterUserBets(g).length > 0);
-              let betAmount = null;
-              if (round1Game) {
-                const userBets = filterUserBets(round1Game);
-                if (userBets.length > 0) {
-                  betAmount = userBets[0].amount;
-                }
-              }
-              const winAmount = betAmount ? (betAmount * 5).toFixed(2) : null;
-              return (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg text-white"
-                >
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center">
-                      <div className="mr-4 bg-white bg-opacity-20 p-3 rounded-full">
-                        <Trophy className="h-8 w-8" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
-                        <p className="text-white text-opacity-90 max-w-xl">
-                          You&apos;ve qualified for Round 2 exclusive games with higher stakes and bigger rewards.<br />
-                          {betAmount && winAmount && (
-                            <>
-                              <span className="block mt-2 text-lg font-semibold text-yellow-200">You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> (5x your bet of {betAmount} USDT)!</span>
-                              <span className="block mt-2">You can <span className="font-bold">opt out</span> and take your winnings, or <span className="font-bold">play for Round 2</span> to 25x your amount!</span>
-                              <div className="flex gap-4 mt-4">
-                                <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">Opt Out &amp; Take Winnings</Button>
-                                <Button className="bg-purple-700 text-white font-bold hover:bg-purple-800">WIN 25X</Button>
-                              </div>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="hidden md:block">
-                      <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/50 text-sm px-4 py-2">
-                        VIP PLAYER STATUS
-                      </Badge>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })()}
 
-            {/* Wallet Connection Check - show but don't block the UI */}
-            {!isConnected && (
+          {/* Round 2 Qualification Banner */}
+          {games.some(game => game.round === 2 && game.status !== 'completed') && (() => {
+            // Find the user's bet on a Round 1 game
+            const round1Game = games.find(g => g.round === 1 && g.bets && g.bets.length > 0);
+            let betAmount = null;
+            if (round1Game && round1Game.bets && round1Game.bets.length > 0) {
+              betAmount = round1Game.bets[0].amount;
+            }
+            const winAmount = betAmount ? (betAmount * 5).toFixed(2) : null;
+            return (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
+                className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow-lg text-white"
               >
-                <Card className="mb-8 border-dashed border-2 border-primary/30 bg-primary/5">
-                  <CardContent className="flex flex-col md:flex-row justify-between items-center p-6">
-                    <div>
-                      <h2 className="text-xl font-semibold mb-2">Connect Your TronLink Wallet</h2>
-                      <p className="text-muted-foreground">Connect your wallet to enjoy the full experience and start winning USDT</p>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center">
+                    <div className="mr-4 bg-white bg-opacity-20 p-3 rounded-full">
+                      <Trophy className="h-8 w-8" />
                     </div>
-                    <Button
-                      onClick={connectWallet}
-                      className="mt-4 md:mt-0"
-                      size="lg"
-                    >
-                      {isMobile ? 'Enter Wallet Address' : isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Loading State */}
-            {loading && (
-              <div className="flex justify-center items-center py-20">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <span className="ml-3 text-lg">Loading games...</span>
-              </div>
-            )}
-
-            {/* Error State */}
-            {error && !loading && (
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-semibold mb-4 text-red-500">Error</h2>
-                <p className="mb-6">{error}</p>
-                <Button onClick={fetchGames}>Try Again</Button>
-              </div>
-            )}
-
-            {/* Games List */}
-            {!loading && !error && games.length > 0 && (
-              <>
-                {/* Ongoing Games Section */}
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">Ongoing Games</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {games
-                      .filter(game => game.round !== 2)
-                      .map((game, i) => {
-                        // Get user-specific bets for this game
-                        const userBets = filterUserBets(game);
-                        const userHasBet = userBets.length > 0;
-                        
-                        return (
-                          <motion.div
-                            key={game._id}
-                            variants={cardVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: i * 0.1 }}
-                          >
-                            <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                              {game.imageUrl && (
-                                <div className="aspect-video w-full overflow-hidden">
-                                  <Image
-                                    src={game.imageUrl}
-                                    alt={game.name || 'Game'}
-                                    width={400}
-                                    height={225}
-                                    className="w-full h-full object-cover transition-transform hover:scale-105"
-                                  />
-                                </div>
-                              )}
-                              <CardHeader>
-                                <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
-                                <CardDescription>
-                                  {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent className="flex-grow">
-                                {/* Display user's bet if available - only for non-qualified games */}
-                                {userHasBet ? (
-                                  <ResultCard
-                                    gameTitle={game.name || `Game ${game._id.slice(-4)}`}
-                                    luckyNumber={JSON.parse(userBets[0].item).name}
-                                    status={game.status === 'completed' ? 'completed' : 'waiting'}
-                                    timestamp={new Date(game.createdAt || Date.now())}
-                                  />
-                                ) : (
-                                  <>
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <Coins className="h-4 w-4 text-primary" />
-                                      <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
-                                    </div>
-                                    <div className="mt-2 text-sm text-muted-foreground">
-                                      {game.items?.length} possible outcomes
-                                    </div>
-                                    {/* Conditional Display for Round or Winners */}
-                                    {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
-                                      <div className="mt-4 space-y-2">
-                                        <div className="text-sm font-medium text-green-600">Winners</div>
-                                        {game.winners.map((winner, index) => (
-                                          <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
-                                            <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
-                                            <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : game.round !== undefined && game.round !== 2 ? (
-                                      <>
-                                        <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
-                                          Round {game.round}
-                                        </span>
-                                      </>
-                                    ) : null}
-                                  </>
-                                )}
-                              </CardContent>
-
-                              <CardFooter>
-                                {game.status !== 'completed' ? (
-                                  userHasBet ? (
-                                    <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
-                                      Bet Already Placed
-                                    </div>
-                                  ) : (
-                                    <Button className="w-full" asChild>
-                                      <Link href={`/play/${game._id}`}>Play Now</Link>
-                                    </Button>
-                                  )
-                                ) : (
-                                  <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
-                                    Game Completed
-                                  </div>
-                                )}
-                              </CardFooter>
-                            </Card>
-                          </motion.div>
-                        );
-                      })}
+                    <div>
+                      <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
+                      <p className="text-white text-opacity-90 max-w-xl">
+                        You&apos;ve qualified for Round 2 exclusive games with higher stakes and bigger rewards.<br />
+                        {betAmount && winAmount && (
+                          <>
+                            <span className="block mt-2 text-lg font-semibold text-yellow-200">You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> (5x your bet of {betAmount} USDT)!</span>
+                            <span className="block mt-2">You can <span className="font-bold">opt out</span> and take your winnings, or <span className="font-bold">play for Round 2</span> to 25x your amount!</span>
+                            <div className="flex gap-4 mt-4">
+                              <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">Opt Out &amp; Take Winnings</Button>
+                              <Button className="bg-purple-700 text-white font-bold hover:bg-purple-800">Play Round 2</Button>
+                            </div>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden md:block">
+                    <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/50 text-sm px-4 py-2">
+                      VIP PLAYER STATUS
+                    </Badge>
                   </div>
                 </div>
-                
-                {/* Round 2 Qualified Games Section */}
-                {games.some(game => game.round === 2) && (
-                  <div className="mb-10">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center mt-10">
-                      Your Qualified Games
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {games
-                        .filter(game => game.round === 2)
-                        .map((game, i) => {
-                          // Get user-specific bets for this game
-                          const userBets = filterUserBets(game);
-                          const userHasBet = userBets.length > 0;
-                          
-                          return (
-                            <motion.div
-                              key={game._id}
-                              variants={cardVariants}
-                              initial="hidden"
-                              animate="visible"
-                              transition={{ delay: i * 0.1 }}
-                            >
-                              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-purple-500 transform hover:-translate-y-1 h-full flex flex-col">
-                                {game.imageUrl && (
-                                  <div className="aspect-video w-full overflow-hidden relative">
-                                    <div className="absolute top-2 right-2 z-10">
-                                      <Badge className="bg-purple-600">VIP GAME</Badge>
-                                    </div>
-                                    <Image
-                                      src={game.imageUrl}
-                                      alt={game.name || 'Game'}
-                                      width={400}
-                                      height={225}
-                                      className="w-full h-full object-cover transition-transform hover:scale-105"
-                                    />
-                                  </div>
-                                )}
-                                <CardHeader>
-                                  <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
-                                  <CardDescription>
-                                    {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
-                                  </CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex-grow">
-                                  {/* Display user's bet if available */}
-                                  {userHasBet ? (
-                                    <ResultCard
-                                      gameTitle={game.name || `Game ${game._id.slice(-4)}`}
-                                      luckyNumber={JSON.parse(userBets[0].item).name}
-                                      status={game.status === 'completed' ? 'completed' : 'waiting'}
-                                      timestamp={new Date(game.createdAt || Date.now())}
-                                    />
-                                  ) : (
-                                    <>
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Coins className="h-4 w-4 text-primary" />
-                                        <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
-                                      </div>
-                                      <div className="mt-2 text-sm text-muted-foreground">
-                                        {game.items?.length} possible outcomes
-                                      </div>
-                                      {/* Conditional Display for Round or Winners */}
-                                      {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
-                                        <div className="mt-4 space-y-2">
-                                          <div className="text-sm font-medium text-green-600">Winners</div>
-                                          {game.winners.map((winner, index) => (
-                                            <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
-                                              <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
-                                              <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <div className="mt-4">
-                                          <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
-                                            Round 2 Qualified
-                                          </span>
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                </CardContent>
+              </motion.div>
+            );
+          })()}
 
-                                <CardFooter>
-                                  {game.status !== 'completed' ? (
-                                    userHasBet ? (
-                                      <div className="w-full text-center py-2 bg-blue-100 text-blue-700 rounded">
-                                        Bet Already Placed
-                                      </div>
-                                    ) : (
-                                      <Button className="w-full" asChild>
-                                        <Link href={`/play/${game._id}`}>Play Now</Link>
-                                      </Button>
-                                    )
-                                  ) : (
-                                    <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
-                                      Game Completed
-                                    </div>
-                                  )}
-                                </CardFooter>
-                              </Card>
-                            </motion.div>
-                          );
-                        })}
-                    </div>
+          {/* Authentication Check */}
+          {sessionStatus === 'unauthenticated' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center py-12 bg-primary/5 rounded-xl border border-primary/10"
+            >
+              <h2 className="text-2xl font-semibold mb-4">Please Sign In</h2>
+              <p className="mb-6 text-muted-foreground">You need to sign in to view and play games</p>
+              <Button asChild size="lg" className="px-8">
+                <Link href="/api/auth/signin">Sign In</Link>
+              </Button>
+            </motion.div>
+          )}
+
+          {/* Wallet Connection Check - show but don't block the UI */}
+          {sessionStatus === 'authenticated' && !isConnected && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="mb-8 border-dashed border-2 border-primary/30 bg-primary/5">
+                <CardContent className="flex flex-col md:flex-row justify-between items-center p-6">
+                  <div>
+                    <h2 className="text-xl font-semibold mb-2">Connect Your TronLink Wallet</h2>
+                    <p className="text-muted-foreground">Connect your wallet to enjoy the full experience and start winning USDT</p>
                   </div>
-                )}
-              </>
-            )}
+                  <Button
+                    onClick={connectWallet}
+                    className="mt-4 md:mt-0"
+                    size="lg"
+                  >
+                    {isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
-            {/* No Games Available */}
-            {!loading && !error && games.length === 0 && (
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-semibold mb-4">No Games Available</h2>
-                <p className="mb-6 text-muted-foreground">There are currently no games available to play</p>
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <span className="ml-3 text-lg">Loading games...</span>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="text-center py-12">
+              <h2 className="text-2xl font-semibold mb-4 text-red-500">Error</h2>
+              <p className="mb-6">{error}</p>
+              <Button onClick={fetchGames}>Try Again</Button>
+            </div>
+          )}
+
+          {/* Games List */}
+          {!loading && !error && games.length > 0 && (
+            <>
+
+              {/* Round 1 Qualified Games Section */}              {/* Other Games Section */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Ongoing Games</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {games
+                    .filter(game => game.round !== 2)
+                    .map((game, i) => (
+                      <motion.div
+                        key={game._id}
+                        variants={cardVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: i * 0.1 }}
+                      >
+                        <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
+                          {game.imageUrl && (
+                            <div className="aspect-video w-full overflow-hidden">
+                              <Image
+                                src={game.imageUrl}
+                                alt={game.name || 'Game'}
+                                width={400}
+                                height={225}
+                                className="w-full h-full object-cover transition-transform hover:scale-105"
+                              />
+                            </div>
+                          )}
+                          <CardHeader>
+                            <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                            <CardDescription>
+                              {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="flex-grow">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Coins className="h-4 w-4 text-primary" />
+                              <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                            </div>
+                            <div className="mt-2 text-sm text-muted-foreground">
+                              {game.items?.length} possible outcomes
+                            </div>
+                            {/* Conditional Display for Round or Winners */}
+                            {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                              <div className="mt-4 space-y-2">
+                                <div className="text-sm font-medium text-green-600">Winners</div>
+                                {game.winners.map((winner, index) => (
+                                  <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
+                                    <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
+                                    <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : game.round !== undefined && game.round !== 2 ? (
+                              <>
+                                <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
+                                  Round {game.round}
+                                </span>
+                              </>
+                            ) : null}
+                          </CardContent>
+
+                          <CardFooter>
+                            {game.status !== 'completed' ? (
+                              <Button className="w-full" asChild>
+                                <Link href={`/play/${game._id}`}>Play Now</Link>
+                              </Button>
+                            ) : (
+                              <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
+                                Game Completed
+                              </div>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    ))}
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              
+              {/* Round 2 Qualified Games Section */}
+              {games.some(game => game.round === 2) && (
+                <div className="mb-10">
+                  <h2 className="text-2xl font-bold mb-4 flex items-center mt-10">
+                    
+                    Your Qualified Games
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {games
+                      .filter(game => game.round === 2)
+                      .map((game, i) => (
+                        <motion.div
+                          key={game._id}
+                          variants={cardVariants}
+                          initial="hidden"
+                          animate="visible"
+                          transition={{ delay: i * 0.1 }}
+                        >
+                          <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-purple-500 transform hover:-translate-y-1 h-full flex flex-col">
+                            {game.imageUrl && (
+                              <div className="aspect-video w-full overflow-hidden relative">
+                                <div className="absolute top-2 right-2 z-10">
+                                  <Badge className="bg-purple-600">VIP GAME</Badge>
+                                </div>
+                                <Image
+                                  src={game.imageUrl}
+                                  alt={game.name || 'Game'}
+                                  width={400}
+                                  height={225}
+                                  className="w-full h-full object-cover transition-transform hover:scale-105"
+                                />
+                              </div>
+                            )}
+                            <CardHeader>
+                              <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                              <CardDescription>
+                                {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Coins className="h-4 w-4 text-primary" />
+                                <span>Min Bet: {game.minBet || 2.00} USDT TRC 20</span>
+                              </div>
+                              <div className="mt-2 text-sm text-muted-foreground">
+                                {game.items?.length} possible outcomes
+                              </div>
+                              {/* Conditional Display for Round or Winners */}
+                              {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
+                                <div className="mt-4 space-y-2">
+                                  <div className="text-sm font-medium text-green-600">Winners</div>
+                                  {game.winners.map((winner, index) => (
+                                    <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-green-50">
+                                      <span className="font-semibold text-primary"><span className="text-muted-foreground">Number:</span> {winner.item?.name}</span>
+                                      <span className="font-semibold text-green-600"><span className="text-muted-foreground">Won:</span> {winner.amountWon} USDT</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="mt-4">
+                                  <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
+                                    Round 2 Qualified
+                                  </span>
+                                </div>
+                              )}
+                            </CardContent>
+
+                            <CardFooter>
+                              {game.status !== 'completed' ? (
+                                <Button className="w-full" asChild>
+                                  <Link href={`/play/${game._id}`}>Play Now</Link>
+                                </Button>
+                              ) : (
+                                <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
+                                  Game Completed
+                                </div>
+                              )}
+                            </CardFooter>
+                          </Card>
+                        </motion.div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+
+            </>
+          )}
+
+          {/* No Games Available */}
+          {!loading && !error && games.length === 0 && sessionStatus === 'authenticated' && (
+            <div className="text-center py-12">
+              <h2 className="text-2xl font-semibold mb-4">No Games Available</h2>
+              <p className="mb-6 text-muted-foreground">There are currently no games available to play</p>
+            </div>
+          )}
+        </div>
       </main>
+
+
 
       {/* Footer */}
       <footer className="relative border-t border-primary/10 py-8 md:py-12 overflow-hidden">
-        {/* Trust Indicators */}
-        <div className="bg-black/5 backdrop-blur-sm py-6 md:py-8 border-y border-primary/10 mb-8">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-              <div className="flex flex-col items-center p-4">
-                <Shield className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
-                <h3 className="font-semibold text-base lg:text-lg mb-1">100% Secure</h3>
-                <p className="text-xs md:text-sm text-muted-foreground">All transactions verified on TRON blockchain</p>
-              </div>
-              <div className="flex flex-col items-center p-4">
-                <Lock className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
-                <h3 className="font-semibold text-base lg:text-lg mb-1">Fair Games</h3>
-                <p className="text-xs md:text-sm text-muted-foreground">Provably fair algorithm with verified results</p>
-              </div>
-              <div className="flex flex-col items-center p-4">
-                <CheckCircle2 className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
-                <h3 className="font-semibold text-base lg:text-lg mb-1">Instant Payouts</h3>
-                <p className="text-xs md:text-sm text-muted-foreground">Winnings sent directly to your TronLink wallet</p>
-              </div>
-              <div className="flex flex-col items-center p-4">
-                <Trophy className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
-                <h3 className="font-semibold text-base lg:text-lg mb-1">VIP Rewards</h3>
-                <p className="text-xs md:text-sm text-muted-foreground">Qualify for exclusive Round 2 games with higher prizes</p>
-              </div>
+            {/* Trust Indicators */}
+            <div className="bg-black/5 backdrop-blur-sm py-6 md:py-8 border-y border-primary/10 mb-8">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+            <div className="flex flex-col items-center p-4">
+              <Shield className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
+              <h3 className="font-semibold text-base lg:text-lg mb-1">100% Secure</h3>
+              <p className="text-xs md:text-sm text-muted-foreground">All transactions verified on TRON blockchain</p>
+            </div>
+            <div className="flex flex-col items-center p-4">
+              <Lock className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
+              <h3 className="font-semibold text-base lg:text-lg mb-1">Fair Games</h3>
+              <p className="text-xs md:text-sm text-muted-foreground">Provably fair algorithm with verified results</p>
+            </div>
+            <div className="flex flex-col items-center p-4">
+              <CheckCircle2 className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
+              <h3 className="font-semibold text-base lg:text-lg mb-1">Instant Payouts</h3>
+              <p className="text-xs md:text-sm text-muted-foreground">Winnings sent directly to your TronLink wallet</p>
+            </div>
+            <div className="flex flex-col items-center p-4">
+              <Trophy className="h-8 w-8 md:h-10 md:w-10 text-primary mb-3" />
+              <h3 className="font-semibold text-base lg:text-lg mb-1">VIP Rewards</h3>
+              <p className="text-xs md:text-sm text-muted-foreground">Qualify for exclusive Round 2 games with higher prizes</p>
             </div>
           </div>
         </div>
+      </div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 z-0"></div>
         <div className="container relative z-10 px-4 md:px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">

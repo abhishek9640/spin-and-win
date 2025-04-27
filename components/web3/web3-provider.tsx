@@ -63,9 +63,20 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     
     // Check for TronLink connection on mount
     const checkTronLinkConnection = () => {
+      // First check for stored address in localStorage
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      
+      if (storedAddress) {
+        console.log('Found stored wallet address:', storedAddress);
+        return; // If we have a stored address, use that
+      }
+      
+      // Only check for live TronLink connection if we don't have a stored address
       if (isTronLinkInstalled() && window.tronWeb?.defaultAddress?.base58) {
-        // If TronLink is connected, store the address
-        localStorage.setItem(STORED_WALLET_KEY, window.tronWeb.defaultAddress.base58);
+        const currentAddress = window.tronWeb.defaultAddress.base58;
+        console.log('Found active TronLink connection:', currentAddress);
+        // Store the address
+        localStorage.setItem(STORED_WALLET_KEY, currentAddress);
       }
     };
     
@@ -74,7 +85,15 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     // Setup event listener for TronLink account changes
     const handleTronLinkAccountChange = (e: MessageEvent) => {
       if (e.data?.message?.action === "accountsChanged") {
-        checkTronLinkConnection();
+        if (window.tronWeb?.defaultAddress?.base58) {
+          // Update stored address when account changes
+          localStorage.setItem(STORED_WALLET_KEY, window.tronWeb.defaultAddress.base58);
+          console.log('TronLink account changed, updated stored address');
+        } else {
+          // If account disconnected, remove the stored address
+          localStorage.removeItem(STORED_WALLET_KEY);
+          console.log('TronLink disconnected, removed stored address');
+        }
       }
     };
     

@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { Wallet, User, Smartphone, Edit, Check } from 'lucide-react'
+import { Wallet, User, Edit, Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSession } from "next-auth/react"
 import { toast } from 'sonner'
@@ -34,16 +34,21 @@ export function ConnectWallet() {
   const [username, setUsername] = useState<string>("")
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isMobile, setIsMobile] = useState<boolean>(false)
-  const [showManualInput, setShowManualInput] = useState<boolean>(false)
   const [manualAddress, setManualAddress] = useState<string>("")
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false)
+  const [showManualInput, setShowManualInput] = useState<boolean>(false)
 
   // Check if device is mobile
   useEffect(() => {
     const checkMobile = () => {
       const userAgent = (navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera || '').toLowerCase();
       const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-      setIsMobile(mobileRegex.test(userAgent));
+      const isMobileDevice = mobileRegex.test(userAgent);
+      setIsMobile(isMobileDevice);
+      // Automatically show manual input for mobile users
+      if (isMobileDevice) {
+        setShowManualInput(true);
+      }
     };
     checkMobile();
   }, []);
@@ -55,6 +60,7 @@ export function ConnectWallet() {
       if (storedAddress) {
         setIsConnected(true);
         setAddress(storedAddress);
+        console.log('Restored wallet connection from storage:', storedAddress);
       }
     }
   }, []);
@@ -103,7 +109,18 @@ export function ConnectWallet() {
         }
       })
     }
-  }, [])
+
+    return () => {
+      // Cleanup event listener
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('message', (e) => {
+          if (e.data.message && e.data.message.action === "accountsChanged") {
+            // Cleanup function
+          }
+        });
+      }
+    };
+  }, []);
 
   // Update username when connected
   useEffect(() => {
@@ -116,36 +133,7 @@ export function ConnectWallet() {
         setUsername(`User_${address.slice(0, 4)}`)
       }
     }
-  }, [isConnected, address, session])
-
-  // Handle mobile wallet connection
-  const connectMobileWallet = () => {
-    try {
-      const dappUrl = encodeURIComponent(window.location.href);
-      const tronLinkDeepLink = `tronlinkoutside://dapp?url=${dappUrl}`;
-
-      window.location.href = tronLinkDeepLink;
-
-      const timer = setTimeout(() => {
-        const isAndroid = /android/i.test(navigator.userAgent);
-        const storeUrl = isAndroid
-          ? 'https://play.google.com/store/apps/details?id=com.tronlinkpro.wallet'
-          : 'https://apps.apple.com/us/app/tronlink/id1385446669';
-        window.location.href = storeUrl;
-        setShowManualInput(true); // Show manual input option after timeout
-      }, 3000);
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          clearTimeout(timer);
-        }
-      });
-    } catch (error) {
-      console.error("Error connecting to mobile wallet:", error);
-      toast.error("Failed to connect mobile wallet. Please try again or use manual input.");
-      setShowManualInput(true);
-    }
-  };
+  }, [isConnected, address, session]);
 
   // Handle manual address input
   const handleManualAddressSubmit = () => {
@@ -176,13 +164,16 @@ export function ConnectWallet() {
     setIsLoading(true)
     try {
       if (isMobile) {
-        connectMobileWallet();
+        // On mobile, just show the manual input
+        setShowManualInput(true);
+        setIsLoading(false);
         return;
       }
 
       if (!isTronLinkInstalled) {
         window.open('https://www.tronlink.org/', '_blank')
-        return
+        setIsLoading(false);
+        return;
       }
 
       if (window.tronWeb) {
@@ -286,7 +277,7 @@ export function ConnectWallet() {
     return (
       <div className="flex flex-col gap-4 w-full max-w-sm">
         <div className="text-sm text-muted-foreground">
-          Enter your TronLink address manually:
+          Enter your TronLink address:
         </div>
         <div className="flex gap-2">
           <Input
@@ -311,8 +302,8 @@ export function ConnectWallet() {
         className="flex items-center gap-4"
         disabled={isLoading}
       >
-        {isMobile ? <Smartphone className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
-        {isLoading ? 'Connecting...' : isMobile ? 'Open TronLink App' : !isTronLinkInstalled ? 'Install TronLink' : 'Connect TronLink'}
+        <Wallet className="w-4 h-4" />
+        {isLoading ? 'Connecting...' : isMobile ? 'Enter Wallet Address' : !isTronLinkInstalled ? 'Install TronLink' : 'Connect TronLink'}
       </Button>
     </div>
   )

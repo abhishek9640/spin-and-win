@@ -77,6 +77,9 @@ interface GamesResponse {
   success?: boolean;
 }
 
+// Storage key constant - must match the one in connect-wallet.tsx
+const STORED_WALLET_KEY = 'tronlink_wallet_address';
+
 // Testimonials data
 // const testimonials = [
 //   {
@@ -107,15 +110,66 @@ export default function PlayPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = (navigator.userAgent || navigator.vendor || (window as Window & { opera?: string }).opera || '').toLowerCase();
+      const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+      setIsMobile(mobileRegex.test(userAgent));
+    };
+    checkMobile();
+  }, []);
+
+  // Check for stored wallet address in localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      if (storedAddress) {
+        setIsConnected(true);
+        setTronAddress(storedAddress);
+        console.log('Using stored wallet address:', storedAddress);
+      }
+    }
+
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORED_WALLET_KEY) {
+        if (e.newValue) {
+          setIsConnected(true);
+          setTronAddress(e.newValue);
+          console.log('Wallet address updated from storage:', e.newValue);
+        } else {
+          setIsConnected(false);
+          setTronAddress("");
+          console.log('Wallet address removed from storage');
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Check TronLink connection - only when authenticated
   useEffect(() => {
     if (sessionStatus !== 'authenticated') return;
     
     const checkTronLink = async () => {
+      // Check if we already have a stored address
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      if (storedAddress) {
+        setIsConnected(true);
+        setTronAddress(storedAddress);
+        return; // Use stored address instead of checking TronWeb
+      }
+      
       if (typeof window !== 'undefined') {
         // More robust TronLink detection
         const hasTronLink = !!window.tronWeb || !!window.tronLink;
@@ -141,6 +195,8 @@ export default function PlayPage() {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
               setTronAddress(currentAddress);
+              // Store in localStorage
+              localStorage.setItem(STORED_WALLET_KEY, currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -154,7 +210,11 @@ export default function PlayPage() {
     checkTronLink();
 
     // Setup recurring checks in case TronLink loads after our component
-    const intervalId = setInterval(checkTronLink, 1000);
+    const intervalId = setInterval(() => {
+      if (!isConnected) {
+        checkTronLink();
+      }
+    }, 1000);
 
     // Add event listener for account changes
     const handleMessageEvent = (e: MessageEvent) => {
@@ -167,7 +227,6 @@ export default function PlayPage() {
       window.addEventListener('message', handleMessageEvent);
     }
 
-
     // Cleanup
     return () => {
       clearInterval(intervalId);
@@ -175,11 +234,17 @@ export default function PlayPage() {
         window.removeEventListener('message', handleMessageEvent);
       }
     };
-  }, [sessionStatus]);
+  }, [sessionStatus, isConnected]);
 
   // Connect wallet function
   const connectWallet = async () => {
     try {
+      // For mobile devices, redirect to manual input page or show wallet address form
+      if (isMobile) {
+        window.location.href = '/wallet-connect';
+        return;
+      }
+      
       if (!isTronLinkInstalled) {
         window.open('https://www.tronlink.org/', '_blank');
         toast('Please install TronLink wallet to continue');
@@ -197,6 +262,7 @@ export default function PlayPage() {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
             setTronAddress(currentAddress);
+            localStorage.setItem(STORED_WALLET_KEY, currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {
@@ -209,6 +275,23 @@ export default function PlayPage() {
       toast.error('Failed to connect wallet. Please try again.');
     }
   };
+
+  // Periodically check for wallet address in localStorage
+  useEffect(() => {
+    // Only run this effect if not connected
+    if (isConnected) return;
+    
+    const intervalId = setInterval(() => {
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      if (storedAddress && storedAddress !== tronAddress) {
+        setIsConnected(true);
+        setTronAddress(storedAddress);
+        console.log('Found wallet address in localStorage:', storedAddress);
+      }
+    }, 2000);
+    
+    return () => clearInterval(intervalId);
+  }, [isConnected, tronAddress]);
 
   // Fetch games from the API
   const fetchGames = async () => {
@@ -330,7 +413,7 @@ export default function PlayPage() {
                   className="flex items-center gap-2 border-primary w-full sm:w-auto"
                 >
                   <Wallet className="h-4 w-4" />
-                  {isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
+                  {isMobile ? 'Enter Wallet Address' : isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
                 </Button>
               )}
             </div>
@@ -401,7 +484,7 @@ export default function PlayPage() {
                       className="mt-4 md:mt-0"
                       size="lg"
                     >
-                      {isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
+                      {isMobile ? 'Enter Wallet Address' : isTronLinkInstalled ? 'Connect TronLink' : 'Install TronLink'}
                     </Button>
                   </CardContent>
                 </Card>

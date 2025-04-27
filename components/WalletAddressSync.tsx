@@ -20,12 +20,15 @@ interface ExtendedSession {
   expires: string;
 }
 
+// Storage key constant for wallet address - must match the one in connect-wallet.tsx
+const STORED_WALLET_KEY = 'tronlink_wallet_address';
+
 /**
  * Client component that automatically syncs wallet address to user profile
  * when both authentication and wallet connection are successful
  */
 export const WalletAddressSync = () => {
-  const { isConnected, address } = useAccount();
+  const { isConnected: isWagmiConnected, address: wagmiAddress } = useAccount();
   const { data: session, status } = useSession() as { 
     data: ExtendedSession | null;
     status: "loading" | "authenticated" | "unauthenticated";
@@ -34,11 +37,47 @@ export const WalletAddressSync = () => {
   const [isSynced, setIsSynced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [manualAddress, setManualAddress] = useState<string | null>(null);
 
   const syncAttempted = useRef(false);
   const currentAddress = useRef<string | undefined>(undefined);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  // Get effective address (either from wagmi or localStorage)
+  const address = wagmiAddress || manualAddress;
+  const isConnected = isWagmiConnected || !!manualAddress;
+
+  // Check for manually entered address in localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      if (storedAddress) {
+        setManualAddress(storedAddress);
+        console.log('Found stored TronLink address for sync:', storedAddress);
+      }
+    }
+
+    // Listen for storage changes to detect address updates
+    const handleStorageChange = () => {
+      const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+      if (storedAddress && storedAddress !== manualAddress) {
+        setManualAddress(storedAddress);
+        setIsSynced(false);
+        syncAttempted.current = false;
+        console.log('TronLink address changed, will re-sync:', storedAddress);
+      } else if (!storedAddress && manualAddress) {
+        setManualAddress(null);
+        console.log('TronLink address removed from storage');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [manualAddress]);
 
   const syncWalletAddress = async () => {
     if (isLoading || isSynced || !isConnected || !address || status !== "authenticated") return false;
@@ -101,6 +140,14 @@ export const WalletAddressSync = () => {
     }
   };
 
+  // Check if we need to sync on manual address change
+  useEffect(() => {
+    if (manualAddress && status === "authenticated" && !isSynced) {
+      syncWalletAddress();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualAddress, status]);
+
   useEffect(() => {
     if (isConnected && address && status === "authenticated" && !syncAttempted.current) {
       syncWalletAddress();
@@ -116,6 +163,24 @@ export const WalletAddressSync = () => {
   useEffect(() => {
     if (syncError) console.error("Wallet sync error:", syncError);
   }, [syncError]);
+
+  // Periodically check localStorage for updates (handles cases where storage event might not fire)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (typeof window !== 'undefined') {
+        const storedAddress = localStorage.getItem(STORED_WALLET_KEY);
+        if (storedAddress && storedAddress !== manualAddress) {
+          setManualAddress(storedAddress);
+          setIsSynced(false);
+          syncAttempted.current = false;
+        } else if (!storedAddress && manualAddress) {
+          setManualAddress(null);
+        }
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(intervalId);
+  }, [manualAddress]);
 
   return null;
 };

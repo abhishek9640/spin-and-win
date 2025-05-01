@@ -59,6 +59,7 @@ export default function GamePage() {
   const [isTronLinkInstalled, setIsTronLinkInstalled] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [tronAddress, setTronAddress] = useState<string>("");
+  const [addressStored, setAddressStored] = useState<boolean>(false);
   
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,32 @@ export default function GamePage() {
           setIsConnected(true);
           setTronAddress(storedAddress);
           console.log('Using stored TronLink address:', storedAddress);
+          
+          // Post the wallet address to the API if user is authenticated and not already stored
+          if (session?.user?.authToken && !addressStored) {
+            try {
+              const response = await fetch(`${API_BASE_URL}/api/v1/user/set-crypto-id`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `${session.user.authToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  walletAddress: storedAddress
+                })
+              });
+              
+              if (response.ok) {
+                console.log('Wallet address successfully stored in database');
+                setAddressStored(true); // Mark as stored to prevent further API calls
+              } else {
+                console.error('Failed to store wallet address in database');
+              }
+            } catch (error) {
+              console.error('Error storing wallet address:', error);
+            }
+          }
+          
           return; // Skip further checks if we have a stored address
         }
         
@@ -117,6 +144,31 @@ export default function GamePage() {
               // Store address in localStorage
               localStorage.setItem('tronlink_wallet_address', currentAddress);
               console.log('Connected TronLink address:', currentAddress);
+              
+              // Post the wallet address to the API if user is authenticated and not already stored
+              if (session?.user?.authToken && !addressStored) {
+                try {
+                  const response = await fetch(`${API_BASE_URL}/api/v1/user/set-crypto-id`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `${session.user.authToken}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      walletAddress: currentAddress
+                    })
+                  });
+                  
+                  if (response.ok) {
+                    console.log('Wallet address successfully stored in database');
+                    setAddressStored(true); // Mark as stored to prevent further API calls
+                  } else {
+                    console.error('Failed to store wallet address in database');
+                  }
+                } catch (error) {
+                  console.error('Error storing wallet address:', error);
+                }
+              }
             }
           } catch (error) {
             console.error("Error checking TronLink connection:", error);
@@ -149,7 +201,7 @@ export default function GamePage() {
         window.removeEventListener('message', handleMessageEvent);
       }
     };
-  }, []);
+  }, [API_BASE_URL, session?.user?.authToken, addressStored]);
 
   useEffect(() => {
     // Validate game ID
@@ -247,6 +299,31 @@ export default function GamePage() {
             // Store address in localStorage
             localStorage.setItem('tronlink_wallet_address', currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
+            
+            // Post the wallet address to the API if not already stored
+            if (session?.user?.authToken && !addressStored) {
+              try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/user/set-crypto-id`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `${session.user.authToken}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    walletAddress: currentAddress
+                  })
+                });
+                
+                if (response.ok) {
+                  console.log('Wallet address successfully stored in database');
+                  setAddressStored(true); // Mark as stored to prevent further API calls
+                } else {
+                  console.error('Failed to store wallet address in database');
+                }
+              } catch (error) {
+                console.error('Error storing wallet address:', error);
+              }
+            }
           }
         } catch (error) {
           console.error("Error connecting to TronLink:", error);

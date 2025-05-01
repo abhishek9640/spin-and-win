@@ -9,8 +9,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Coins, Zap, Shield, Sparkles, CheckCircle, AlertCircle, Award, Repeat, ArrowRight, ChevronRight, ChevronsRight } from 'lucide-react'
 import { WalletAddressSync } from "@/components/WalletAddressSync"
 import Link from 'next/link'
-import Image from 'next/image'
 import { toast } from 'sonner'
+import { ImageSlider } from '@/components/ui/image-slider'
 
 // Define interfaces for the API response
 interface GameItem {
@@ -93,20 +93,14 @@ export default function Home() {
       <WalletAddressSync />
       <Header />
       
-      {/* Banner Hero Section */}
+      {/* Banner Hero Section with Slider */}
       <section className="relative py-4 overflow-hidden">
         <div className="container relative z-10 px-4 md:px-6">
-          <div className="relative w-full max-w-10xl mx-auto aspect-[2/1] rounded-2xl overflow-hidden">
-            <Image
-              src="/home.png"
-              alt="Crypto Spin and Win Banner"
-              fill
-              className="object-cover"
-              priority
+          <div className="relative w-full max-w-10xl mx-auto rounded-2xl overflow-hidden">
+            <ImageSlider 
+              images={["/home.png", "/home2.png", "/home3.png"]} 
+              autoPlayInterval={5000}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent" />
-            <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12">
-            </div>
           </div>
         </div>
       </section>

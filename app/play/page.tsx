@@ -65,6 +65,8 @@ interface Game {
   round?: number;
   winners?: Winner[];
   bets?: Bet[];
+  winning_items?: GameItem[];
+  userBets?: Bet[];
 }
 
 interface GamesResponse {
@@ -364,6 +366,55 @@ export default function PlayPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
 
+  // Modify the checkUserWin function to include the first winning item when user loses
+  const checkUserWin = (game: Game) => {
+    // If there are no winning items yet or no user bets, return null
+    if (!userId || !game.userBets) {
+      return null;
+    }
+
+    // Find the user's bet
+    const userBet = game.userBets.find(bet => bet.userId === userId);
+    if (!userBet) return null;
+
+    // Parse the bet item
+    let betItem;
+    try {
+      betItem = typeof userBet.item === 'string' ? JSON.parse(userBet.item) : userBet.item;
+    } catch {
+      return null;
+    }
+
+    // If there are winning items but no match, it's a loss
+    if (game.winning_items && game.winning_items.length > 0) {
+      // Check if user's bet matches any winning item
+      const winningItem = game.winning_items.find(item => item.name === betItem.name);
+      
+      if (winningItem) {
+        // User won
+        const winAmount = userBet.amount * 5;
+        return {
+          won: true,
+          betAmount: userBet.amount,
+          winAmount,
+          betItem,
+          winningItem
+        };
+      } else {
+        // User lost - include the first winning item for display
+        return {
+          won: false,
+          betAmount: userBet.amount,
+          betItem,
+          winningItem: game.winning_items[0] // First winning item
+        };
+      }
+    }
+    
+    // If there are no winning items yet (wheel not spun), return null
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 text-foreground">
       <WalletAddressSync />
@@ -409,13 +460,25 @@ export default function PlayPage() {
 
           {/* Round 2 Qualification Banner */}
           {games.some(game => game.round === 2 && game.status !== 'completed') && (() => {
-            // Find the user's bet on a Round 1 game
-            const round1Game = games.find(g => g.round === 1 && g.bets && g.bets.length > 0);
+            // Find a game that the user has won
+            const userWonGame = games.find(game => {
+              const result = checkUserWin(game);
+              return result && result.won === true;
+            });
+            
+            // Only show qualification banner if user has won a game
+            if (!userWonGame) return null;
+            
+            // Get the bet amount from the won game
             let betAmount = null;
-            if (round1Game && round1Game.bets && round1Game.bets.length > 0) {
-              betAmount = round1Game.bets[0].amount;
+            let winAmount = null;
+            
+            const winResult = checkUserWin(userWonGame);
+            if (winResult && winResult.won) {
+              betAmount = winResult.betAmount;
+              winAmount = winResult.winAmount;
             }
-            const winAmount = betAmount ? (betAmount * 5).toFixed(2) : null;
+            
             return (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -587,6 +650,44 @@ export default function PlayPage() {
                               </div>
                             )}
                             
+                            {/* Winning or Losing Notification */}
+                            {checkUserWin(game) && (
+                              checkUserWin(game)?.won ? (
+                                <div className="mt-4 p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-md text-white">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-bold text-lg">Congratulations!</h4>
+                                    <CheckCircle2 className="h-5 w-5" />
+                                  </div>
+                                  <p className="text-sm mb-2">
+                                    Your bet on <span className="font-bold">Number {checkUserWin(game)?.betItem.name}</span> matches the winning number!
+                                  </p>
+                                  <p className="text-lg font-bold mb-3">
+                                    You won {checkUserWin(game)?.winAmount} USDT! (5x your bet of {checkUserWin(game)?.betAmount} USDT)
+                                  </p>
+                                  <div className="flex gap-2 mt-2">
+                                    <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
+                                      Withdraw Winnings
+                                    </Button>
+                                    <Button className="w-1/2 bg-purple-700 hover:bg-purple-800" size="sm">
+                                      Play Round 2
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-4 p-3 bg-gray-100 border border-gray-200 rounded-md">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-bold text-lg text-gray-700">Better luck next time!</h4>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mb-2">
+                                    Your bet on <span className="font-bold">Number {checkUserWin(game)?.betItem.name}</span> didn&apos;t match the winning number: <span className="font-bold text-red-500">Number {checkUserWin(game)?.winningItem.name}</span>
+                                  </p>
+                                  <Button className="w-full mt-2" variant="outline" size="sm">
+                                    Try Another Game
+                                  </Button>
+                                </div>
+                              )
+                            )}
+                            
                             {/* Conditional Display for Round or Winners */}
                             {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
                               <div className="mt-4 space-y-2">
@@ -598,12 +699,6 @@ export default function PlayPage() {
                                   </div>
                                 ))}
                               </div>
-                            ) : game.round !== undefined && game.round !== 2 ? (
-                              <>
-                                <span className="inline-block bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-1 rounded mt-1">
-                                  Round {game.round}
-                                </span>
-                              </>
                             ) : null}
                           </CardContent>
 
@@ -635,8 +730,7 @@ export default function PlayPage() {
               {games.some(game => game.round === 2) && (
                 <div className="mb-10">
                   <h2 className="text-2xl font-bold mb-4 flex items-center mt-10">
-                    
-                    Your Qualified Games
+                    VIP Games
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {games
@@ -708,6 +802,44 @@ export default function PlayPage() {
                                 </div>
                               )}
                               
+                              {/* Winning or Losing Notification */}
+                              {checkUserWin(game) && (
+                                checkUserWin(game)?.won ? (
+                                  <div className="mt-4 p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-md text-white">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="font-bold text-lg">Congratulations!</h4>
+                                      <CheckCircle2 className="h-5 w-5" />
+                                    </div>
+                                    <p className="text-sm mb-2">
+                                      Your bet on <span className="font-bold">Number {checkUserWin(game)?.betItem.name}</span> matches the winning number!
+                                    </p>
+                                    <p className="text-lg font-bold mb-3">
+                                      You won {checkUserWin(game)?.winAmount} USDT! (5x your bet of {checkUserWin(game)?.betAmount} USDT)
+                                    </p>
+                                    <div className="flex gap-2 mt-2">
+                                      <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
+                                        Withdraw Winnings
+                                      </Button>
+                                      <Button className="w-1/2 bg-purple-700 hover:bg-purple-800" size="sm">
+                                        Play Round 2
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mt-4 p-3 bg-gray-100 border border-gray-200 rounded-md">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="font-bold text-lg text-gray-700">Better luck next time!</h4>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-2">
+                                      Your bet on <span className="font-bold">Number {checkUserWin(game)?.betItem.name}</span> didn&apos;t match the winning number: <span className="font-bold text-red-500">Number {checkUserWin(game)?.winningItem.name}</span>
+                                    </p>
+                                    <Button className="w-full mt-2" variant="outline" size="sm">
+                                      Try Another Game
+                                    </Button>
+                                  </div>
+                                )
+                              )}
+                              
                               {/* Conditional Display for Round or Winners */}
                               {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
                                 <div className="mt-4 space-y-2">
@@ -722,7 +854,7 @@ export default function PlayPage() {
                               ) : (
                                 <div className="mt-4">
                                   <span className="inline-block bg-purple-100 text-purple-600 text-xs font-semibold px-2 py-1 rounded">
-                                    Round 2 Qualified
+                                    VIP Game
                                   </span>
                                 </div>
                               )}

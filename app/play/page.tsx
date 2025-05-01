@@ -415,6 +415,47 @@ export default function PlayPage() {
     return null;
   };
 
+  // Add handleEnterRound2 function to the PlayPage component
+  const handleEnterRound2 = async (betAmount: number) => {
+    if (!session?.user?.authToken) {
+      toast.error('You must be logged in to enter Round 2');
+      return;
+    }
+
+    try {
+      toast.loading('Processing your request...');
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/game/enter-final-round`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `${session.user.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: betAmount
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to enter Round 2: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Round 2 entry response:', data);
+      
+      toast.dismiss();
+      toast.success('You have successfully entered Round 2!');
+      
+      // Refresh games list to show Round 2 games
+      fetchGames();
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : 'Failed to enter Round 2');
+      console.error('Enter Round 2 error:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 text-foreground">
       <WalletAddressSync />
@@ -668,7 +709,11 @@ export default function PlayPage() {
                                     <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
                                       Withdraw Winnings
                                     </Button>
-                                    <Button className="w-1/2 bg-purple-700 hover:bg-purple-800" size="sm">
+                                    <Button 
+                                      className="w-1/2 bg-purple-700 hover:bg-purple-800" 
+                                      size="sm"
+                                      onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount)}
+                                    >
                                       Play Round 2
                                     </Button>
                                   </div>
@@ -820,7 +865,11 @@ export default function PlayPage() {
                                       <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
                                         Withdraw Winnings
                                       </Button>
-                                      <Button className="w-1/2 bg-purple-700 hover:bg-purple-800" size="sm">
+                                      <Button 
+                                        className="w-1/2 bg-purple-700 hover:bg-purple-800" 
+                                        size="sm"
+                                        onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount)}
+                                      >
                                         Play Round 2
                                       </Button>
                                     </div>

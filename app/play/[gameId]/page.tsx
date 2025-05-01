@@ -261,6 +261,11 @@ export default function GamePage() {
           const gameData = responseData.data.records[0];
           console.log('Game details loaded:', gameData);
           setGame(gameData);
+          
+          // If it's a Round 2 game, automatically set bet amount to previous bet amount
+          if (gameData.round === 2 && gameData.minBet) {
+            setBetAmount(gameData.minBet.toString());
+          }
         } else {
           console.error('No game records found in response:', responseData);
           setError('Game not found or no data available');
@@ -613,23 +618,38 @@ export default function GamePage() {
                     
                     {/* Right side - Bet amount and Play button */}
                     <div className="space-y-3 sm:space-y-6 flex flex-col">
-                      <div className="space-y-2 sm:space-y-3 flex-grow">
-                        <h3 className="text-base sm:text-xl font-medium">BET AMOUNT</h3>
-                        <div className="relative">
-                          <Input
-                            id="amount"
-                            type="text"
-                            value={betAmount}
-                            onChange={handleAmountChange}
-                            placeholder="0 USDT"
-                            className="pl-2 sm:pl-4 text-base sm:text-lg py-3 sm:py-6 bg-transparent border border-gray-700 rounded-lg text-white"
-                            disabled={!isConnected || isPlacingBet}
-                          />
+                      {game.round !== 2 ? (
+                        // Only show amount input for regular games
+                        <div className="space-y-2 sm:space-y-3 flex-grow">
+                          <h3 className="text-base sm:text-xl font-medium">BET AMOUNT</h3>
+                          <div className="relative">
+                            <Input
+                              id="amount"
+                              type="text"
+                              value={betAmount}
+                              onChange={handleAmountChange}
+                              placeholder="0 USDT"
+                              className="pl-2 sm:pl-4 text-base sm:text-lg py-3 sm:py-6 bg-transparent border border-gray-700 rounded-lg text-white"
+                              disabled={!isConnected || isPlacingBet}
+                            />
+                          </div>
+                          <div className="text-xs sm:text-sm text-gray-400">
+                            Minimum bet amount: {game.minBet || 10}USDT
+                          </div>
                         </div>
-                        <div className="text-xs sm:text-sm text-gray-400">
-                          Minimum bet amount: {game.minBet || 10}USDT
+                      ) : (
+                        // For Round 2 games, show a fixed amount
+                        <div className="space-y-2 sm:space-y-3 flex-grow">
+                          <h3 className="text-base sm:text-xl font-medium">VIP ROUND BET</h3>
+                          <div className="bg-purple-900/30 border border-purple-500 rounded-lg p-4 text-center">
+                            <span className="text-xl font-bold">{betAmount} USDT</span>
+                            <p className="text-xs text-purple-300 mt-1">Fixed amount from your qualifying bet</p>
+                          </div>
+                          <div className="text-xs sm:text-sm text-purple-400">
+                            Win up to 25x your bet amount in Round 2!
+                          </div>
                         </div>
-                      </div>
+                      )}
                       
                       <Button
                         className="w-full py-4 sm:py-8 text-lg sm:text-2xl font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-500"

@@ -114,6 +114,15 @@ export default function PlayPage() {
   useEffect(() => {
     const checkTronLink = async () => {
       if (typeof window !== 'undefined') {
+        // Check for stored wallet address first
+        const storedAddress = localStorage.getItem('tronlink_wallet_address');
+        if (storedAddress) {
+          setIsConnected(true);
+          setTronAddress(storedAddress);
+          console.log('Using stored TronLink address:', storedAddress);
+          return; // Skip further checks if we have a stored address
+        }
+
         // More robust TronLink detection
         const hasTronLink = !!window.tronWeb || !!window.tronLink;
         console.log('TronLink detection:', {
@@ -138,6 +147,8 @@ export default function PlayPage() {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
               setTronAddress(currentAddress);
+              // Store address in localStorage
+              localStorage.setItem('tronlink_wallet_address', currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -194,6 +205,8 @@ export default function PlayPage() {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
             setTronAddress(currentAddress);
+            // Store address in localStorage
+            localStorage.setItem('tronlink_wallet_address', currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {

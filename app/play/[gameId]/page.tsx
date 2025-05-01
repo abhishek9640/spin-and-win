@@ -5,16 +5,13 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowLeft, Info, AlertCircle, CheckCircle, LockKeyhole, Coins} from 'lucide-react'
+import { Loader2, ArrowLeft, AlertCircle, CheckCircle, LockKeyhole} from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { motion } from 'framer-motion'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 // Define TronLink types
 declare global {
@@ -117,6 +114,8 @@ export default function GamePage() {
               const currentAddress = window.tronWeb.defaultAddress.base58;
               setIsConnected(true);
               setTronAddress(currentAddress);
+              // Store address in localStorage
+              localStorage.setItem('tronlink_wallet_address', currentAddress);
               console.log('Connected TronLink address:', currentAddress);
             }
           } catch (error) {
@@ -245,6 +244,8 @@ export default function GamePage() {
             const currentAddress = window.tronWeb.defaultAddress.base58;
             setIsConnected(true);
             setTronAddress(currentAddress);
+            // Store address in localStorage
+            localStorage.setItem('tronlink_wallet_address', currentAddress);
             toast.success(`Wallet connected: ${currentAddress.slice(0, 8)}...${currentAddress.slice(-6)}`);
           }
         } catch (error) {
@@ -440,7 +441,7 @@ export default function GamePage() {
                         </p>
                         <p className="text-sm text-muted-foreground">Placed at: {betDetails.timestamp}</p>
                       </div>
-                      <Button 
+                      {/* <Button 
                         variant="outline" 
                         className="mt-4 md:mt-0 md:ml-4"
                         onClick={() => {
@@ -449,7 +450,7 @@ export default function GamePage() {
                         }}
                       >
                         Place Another Bet
-                      </Button>
+                      </Button> */}
                     </div>
                   </CardContent>
                 </Card>
@@ -498,229 +499,83 @@ export default function GamePage() {
             
             {/* Betting Interface */}
             {!betPlaced && (
-              <Tabs defaultValue="standard" className="w-full">
-                <TabsList className="w-full mb-6">
-                  <TabsTrigger value="standard" className="flex-1">Standard Bet</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="standard">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        Place Your Bet
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="ml-2 h-8 w-8">
-                                <Info className="h-4 w-4" />
-                                <span className="sr-only">Bet info</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">Select your desired outcome and enter a bet amount. Winnings are calculated based on the odds shown.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </CardTitle>
-                      <CardDescription>
-                        Choose your outcome and bet amount to play
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-3">
-                        <Label htmlFor="amount" className="text-base font-medium">
-                          Bet Amount (USDT TRC-20)
-                        </Label>
+              <Card className="w-full bg-black text-white border-gray-800">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                    {/* Left side - Number grid */}
+                    <div className="space-y-2 sm:space-y-4">
+                      <h3 className="text-base sm:text-xl font-medium">SELECT YOUR LUCKY NUMBER</h3>
+                      
+                      {/* 3x3 Grid of Numbers */}
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                        {[...Array(9)].map((_, index) => {
+                          const number = index + 1; // 1 to 9
+                          const buttonItem = game.items?.find(item => item.name === number.toString());
+                          const isSelected = selectedItem?.name === number.toString();
+                          
+                          return (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              onClick={() => buttonItem && setSelectedItem(buttonItem)}
+                              className={`h-12 sm:h-16  transition-all duration-200
+                                ${isSelected 
+                                  ? "bg-primary text-primary-foreground border-primary scale-105 shadow-glow" 
+                                  : "bg-gray-800 hover:bg-gray-700"
+                                }`}
+                              disabled={isPlacingBet || !isConnected}
+                            >
+                              <span className="text-lg sm:text-xl font-bold">
+                                {number}
+                              </span>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    {/* Right side - Bet amount and Play button */}
+                    <div className="space-y-3 sm:space-y-6 flex flex-col">
+                      <div className="space-y-2 sm:space-y-3 flex-grow">
+                        <h3 className="text-base sm:text-xl font-medium">BET AMOUNT</h3>
                         <div className="relative">
-                          <Coins className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <Input
                             id="amount"
                             type="text"
                             value={betAmount}
                             onChange={handleAmountChange}
-                            placeholder={`${game.minBet || '2.00'} - ${game.maxBet || 'unlimited'}`}
-                            className="pl-10 text-lg"
+                            placeholder="0 USDT"
+                            className="pl-2 sm:pl-4 text-base sm:text-lg py-3 sm:py-6 bg-transparent border border-gray-700 rounded-lg text-white"
                             disabled={!isConnected || isPlacingBet}
                           />
                         </div>
-                        {game.minBet && game.maxBet && (
-                          <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Min: {game.minBet} USDT</span>
-                            <span>Max: {game.maxBet} USDT</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <Label className="text-base font-medium">Select Outcome</Label>
-                          {selectedItem && (
-                            <Badge variant="outline" className="ml-2">
-                              Selected: {selectedItem.name} 
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          {(game.items || []).map((item) => (
-                            <motion.div
-                              key={item._id}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              <Button
-                                variant={selectedItem?._id === item._id ? "default" : "outline"}
-                                onClick={() => setSelectedItem(item)}
-                                className={`w-full h-16 flex flex-col items-center justify-center ${
-                                  selectedItem?._id === item._id 
-                                    ? "bg-primary text-primary-foreground border-primary" 
-                                    : "hover:bg-primary/10"
-                                }`}
-                                disabled={isPlacingBet || !isConnected}
-                              >
-                                <span className="text-lg font-bold">{item.name}</span>
-                               
-                              </Button>
-                            </motion.div>
-                          ))}
+                        <div className="text-xs sm:text-sm text-gray-400">
+                          Minimum bet amount: {game.minBet || 10}USDT
                         </div>
                       </div>
                       
-                      {selectedItem && betAmount && !isNaN(parseFloat(betAmount)) && (
-                        <div className="bg-muted p-4 rounded-lg">
-                          <h4 className="font-medium mb-2">Potential Win</h4>
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">If outcome is {selectedItem.name}:</span>
-                            <span className="text-lg font-bold text-green-600">
-                              {(parseFloat(betAmount) * selectedItem.odds).toFixed(2)} USDT
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter>
                       <Button
-                        className="w-full py-6 text-lg font-semibold"
+                        className="w-full py-4 sm:py-8 text-lg sm:text-2xl font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-500"
                         onClick={handlePlaceBet}
                         disabled={isPlacingBet || !selectedItem || !betAmount || !isConnected}
                       >
                         {isPlacingBet ? (
                           <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Processing Bet...
+                            <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                            Processing...
                           </>
-                        ) : !isConnected ? (
-                          'Connect Wallet to Place Bet'
-                        ) : !selectedItem || !betAmount ? (
-                          'Select Outcome & Enter Amount'
                         ) : (
-                          `Place ${betAmount} USDT Bet on ${selectedItem.name}`
+                          "PLAY NOW"
                         )}
                       </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
           
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Security Information */}
-            {/* <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <Shield className="h-5 w-5 mr-2 text-primary" />
-                  Secure & Fair Gaming
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium">Blockchain Verified</h4>
-                    <p className="text-sm text-muted-foreground">All bets are recorded on the TRON blockchain for transparency</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium">Provably Fair</h4>
-                    <p className="text-sm text-muted-foreground">Our fair algorithm ensures every outcome is random and verifiable</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium">Instant Payouts</h4>
-                    <p className="text-sm text-muted-foreground">Winning payouts are sent directly to your connected wallet</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full" 
-                  onClick={() => setShowSecurityInfo(!showSecurityInfo)}
-                >
-                  {showSecurityInfo ? 'Hide Details' : 'Learn More'}
-                </Button>
-                
-                {showSecurityInfo && (
-                  <div className="border-t pt-4 mt-2 text-sm text-muted-foreground">
-                    <p className="mb-2">
-                      Our platform uses smart contracts to handle all bets and payouts. Each game result is generated using a provably fair algorithm that can be independently verified.
-                    </p>
-                    <p>
-                      Your funds are always under your control through your TronLink wallet, and all transactions are publicly visible on the TRON blockchain.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card> */}
-            
-            {/* Recent Winners */}
-            {/* <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center">
-                  <Trophy className="h-5 w-5 mr-2 text-amber-500" />
-                  Recent Winners
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentWinners.map((winner, i) => (
-                    <div key={i} className="flex justify-between items-center pb-3 border-b last:border-0 last:pb-0">
-                      <div>
-                        <div className="font-medium">{winner.name}</div>
-                        <div className="text-sm text-muted-foreground">Won with {winner.item}</div>
-                      </div>
-                      <div className="font-bold text-green-600">{winner.amount} USDT</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="pt-0">
-                <Button variant="ghost" size="sm" className="w-full">
-                  View All Winners
-                </Button>
-              </CardFooter>
-            </Card> */}
-            
-            {/* Need Help? */}
-            {/* <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  If you have any questions about placing bets or how the game works, our support team is here to help.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Contact Support
-                </Button>
-              </CardContent>
-            </Card> */}
-          </div>
+
         </div>
       </div>
       

@@ -58,7 +58,7 @@ interface Game {
   description?: string;
   minBet?: number;
   maxBet?: number;
-  status?: 'active' | 'inactive' | 'completed';
+  status?: 'active' | 'inactive' | 'completed' | 'pending';
   createdAt?: string;
   imageUrl?: string;
   items: GameItem[];
@@ -107,6 +107,7 @@ export default function PlayPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   // const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -313,7 +314,6 @@ export default function PlayPage() {
       const response = await fetch(`${API_BASE_URL}/api/v1/game/fetch-games`, {
         headers: {
           'Authorization': `${session.user.authToken}`,
-
         }
       });
       console.log('Response:', response);
@@ -329,6 +329,16 @@ export default function PlayPage() {
       if (responseData.data && responseData.data.records) {
         setGames(responseData.data.records);
         console.log('Games loaded:', responseData.data.records.length);
+        
+        // Extract user ID from the first game with bets if available
+        const gameWithBets = responseData.data.records.find(game => 
+          game.bets && game.bets.length > 0
+        );
+        
+        if (gameWithBets?.bets?.[0]?.userId) {
+          setUserId(gameWithBets.bets[0].userId);
+          console.log('User ID extracted:', gameWithBets.bets[0].userId);
+        }
       } else {
         console.error('Unexpected API response structure:', responseData);
         setError('Unexpected API response format');
@@ -547,6 +557,36 @@ export default function PlayPage() {
                             <div className="mt-2 text-sm text-muted-foreground">
                               {game.items?.length} possible outcomes
                             </div>
+                            
+                            {/* Display Bet Information */}
+                            {game.bets && game.bets.length > 0 && (
+                              <div className="mt-4 space-y-2">
+                                <div className="text-sm font-medium text-blue-600">Your Bets</div>
+                                {game.bets
+                                  .filter(bet => userId && bet.userId === userId)
+                                  .map((bet, index) => {
+                                    // Parse the bet item if it's a string
+                                    let betItem;
+                                    try {
+                                      betItem = typeof bet.item === 'string' ? JSON.parse(bet.item) : bet.item;
+                                    } catch {
+                                      betItem = { name: 'Unknown' };
+                                    }
+                                    
+                                    return (
+                                      <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-blue-50">
+                                        <span className="font-semibold text-primary">
+                                          <span className="text-muted-foreground">Number:</span> {betItem.name}
+                                        </span>
+                                        <span className="font-semibold text-blue-600">
+                                          <span className="text-muted-foreground">Bet:</span> {bet.amount} USDT
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                            
                             {/* Conditional Display for Round or Winners */}
                             {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
                               <div className="mt-4 space-y-2">
@@ -569,9 +609,15 @@ export default function PlayPage() {
 
                           <CardFooter>
                             {game.status !== 'completed' ? (
-                              <Button className="w-full" asChild>
-                                <Link href={`/play/${game._id}`}>Play Now</Link>
-                              </Button>
+                              game.bets && userId && game.bets.some(bet => bet.userId === userId) ? (
+                                <Button className="w-full" variant="outline" disabled>
+                                  Bet Already Placed
+                                </Button>
+                              ) : (
+                                <Button className="w-full" asChild>
+                                  <Link href={`/play/${game._id}`}>Play Now</Link>
+                                </Button>
+                              )
                             ) : (
                               <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
                                 Game Completed
@@ -632,6 +678,36 @@ export default function PlayPage() {
                               <div className="mt-2 text-sm text-muted-foreground">
                                 {game.items?.length} possible outcomes
                               </div>
+                              
+                              {/* Display Bet Information */}
+                              {game.bets && game.bets.length > 0 && (
+                                <div className="mt-4 space-y-2">
+                                  <div className="text-sm font-medium text-blue-600">Your Bets</div>
+                                  {game.bets
+                                    .filter(bet => userId && bet.userId === userId)
+                                    .map((bet, index) => {
+                                      // Parse the bet item if it's a string
+                                      let betItem;
+                                      try {
+                                        betItem = typeof bet.item === 'string' ? JSON.parse(bet.item) : bet.item;
+                                      } catch {
+                                        betItem = { name: 'Unknown' };
+                                      }
+                                      
+                                      return (
+                                        <div key={index} className="text-sm text-muted-foreground flex items-center justify-between border p-2 rounded bg-blue-50">
+                                          <span className="font-semibold text-primary">
+                                            <span className="text-muted-foreground">Number:</span> {betItem.name}
+                                          </span>
+                                          <span className="font-semibold text-blue-600">
+                                            <span className="text-muted-foreground">Bet:</span> {bet.amount} USDT
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              )}
+                              
                               {/* Conditional Display for Round or Winners */}
                               {game.status === 'completed' && game.winners && game.winners.length > 0 ? (
                                 <div className="mt-4 space-y-2">
@@ -654,9 +730,15 @@ export default function PlayPage() {
 
                             <CardFooter>
                               {game.status !== 'completed' ? (
-                                <Button className="w-full" asChild>
-                                  <Link href={`/play/${game._id}`}>Play Now</Link>
-                                </Button>
+                                game.bets && userId && game.bets.some(bet => bet.userId === userId) ? (
+                                  <Button className="w-full" variant="outline" disabled>
+                                    Bet Already Placed
+                                  </Button>
+                                ) : (
+                                  <Button className="w-full" asChild>
+                                    <Link href={`/play/${game._id}`}>Play Now</Link>
+                                  </Button>
+                                )
                               ) : (
                                 <div className="text-sm text-muted-foreground w-full text-center py-2 bg-gray-100 rounded">
                                   Game Completed

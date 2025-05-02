@@ -33,15 +33,27 @@ interface Item {
 
 interface TransactionDetail {
   _id: string;
+  userId: string;
+  gameId: string;
+  type: string;
   amount: number;
   status: string;
+  adminApproved: boolean;
+  item: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
+  __v?: number;
 }
 
-interface BetsData {
-  userDetails: UserDetail[];
-  transactionDetails: TransactionDetail[];
+interface Bet {
+  userId: string;
+  amount: number;
+  item: string;
+  transaction_id: string;
+  round_count: number;
+  _id: string;
+  userDetails: UserDetail;
+  transactionDetails: TransactionDetail;
 }
 
 interface Winner {
@@ -59,12 +71,14 @@ interface GameDetails {
   is_settled_winning_price: boolean;
   users: string[];
   winning_items: Item[];
-  bets: BetsData;
+  bets: Bet;
   winners: Winner[];
-  usersDetails: UserDetail[];
+  usersDetails?: UserDetail;
   createdAt: string;
   updatedAt: string;
   __v: number;
+  userDetails?: UserDetail;
+  transactionDetails?: TransactionDetail;
 }
 
 interface ApiResponse {
@@ -87,6 +101,7 @@ const GameDetailsPage = () => {
   const [gameDetails, setGameDetails] = useState<GameDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userBets, setUserBets] = useState<Map<string, Bet[]>>(new Map());
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
   const { data: session, status } = useSession();
   const { toast } = useToast();
@@ -129,11 +144,28 @@ const GameDetailsPage = () => {
         // Find the specific game by ID
         if (responseData.data && Array.isArray(responseData.data.records)) {
           console.log("Looking for game with ID:", gameId);
-          const foundGame = responseData.data.records.find(game => game._id === gameId);
+          const foundGames = responseData.data.records.filter(game => game._id === gameId);
           
-          if (foundGame) {
-            console.log("Found game:", foundGame._id);
-            setGameDetails(foundGame);
+          if (foundGames.length > 0) {
+            // Get the first game (as reference)
+            const baseGame = foundGames[0];
+            console.log("Found game:", baseGame._id);
+            
+            // Organize user bets from all instances of this game
+            const betsMap = new Map<string, Bet[]>();
+            
+            foundGames.forEach(game => {
+              if (game.bets) {
+                const userId = game.bets.userId;
+                if (!betsMap.has(userId)) {
+                  betsMap.set(userId, []);
+                }
+                betsMap.get(userId)?.push(game.bets);
+              }
+            });
+            
+            setUserBets(betsMap);
+            setGameDetails(baseGame);
           } else {
             console.log(`Game with ID ${gameId} not found in the response`);
             // If no specific game found, just set the first game
@@ -162,6 +194,18 @@ const GameDetailsPage = () => {
 
   const handleBack = () => {
     router.back();
+  };
+
+  const getWinnerDetails = (winnerId: string) => {
+    return userBets.get(winnerId)?.[0]?.userDetails;
+  };
+
+  const parseItemString = (itemStr: string) => {
+    try {
+      return JSON.parse(itemStr);
+    } catch {
+      return { name: "Unknown", odds: 0 };
+    }
   };
 
   if (loading) {
@@ -258,7 +302,7 @@ const GameDetailsPage = () => {
           {Array.isArray(gameDetails.winners) && gameDetails.winners.length > 0 ? (
             <div className="space-y-4">
               {gameDetails.winners.map((winner, index) => {
-                const user = gameDetails.usersDetails?.find(u => u._id === winner.userId);
+                const user = getWinnerDetails(winner.userId);
                 return (
                   <div key={winner._id || index} className="border p-3 rounded">
                     <div className="flex items-center gap-3">
@@ -289,90 +333,71 @@ const GameDetailsPage = () => {
           )}
         </div>
         
-        {/* Users */}
+        {/* Participants and Bets */}
         <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-2">Participants</h2>
-          {Array.isArray(gameDetails.usersDetails) && gameDetails.usersDetails.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {gameDetails.usersDetails.map((user) => (
-                <div key={user._id} className="border p-3 rounded flex items-center gap-3">
-                  {user.profile_pic?.Location && (
-                    <Image 
-                      src={user.profile_pic.Location} 
-                      alt={user.username}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                    />
-                  )}
-                  <div>
-                    <p><span className="font-medium">Username:</span> {user.username}</p>
-                    <p><span className="font-medium">Email:</span> {user.email}</p>
+          <h2 className="text-xl font-bold mb-2">Participants and Bets</h2>
+          {gameDetails.users && gameDetails.users.length > 0 ? (
+            <div className="space-y-6">
+              {gameDetails.users.map(userId => {
+                const userBetsList = userBets.get(userId) || [];
+                const userDetail = userBetsList.length > 0 ? userBetsList[0].userDetails : null;
+                
+                if (!userDetail) return null;
+                
+                return (
+                  <div key={userId} className="border p-4 rounded">
+                    <div className="flex items-center gap-3 mb-4">
+                      {userDetail.profile_pic?.Location && (
+                        <Image 
+                          src={userDetail.profile_pic.Location} 
+                          alt={userDetail.username}
+                          width={48}
+                          height={48}
+                          className="rounded-full"
+                        />
+                      )}
+                      <div>
+                        <p className="text-lg font-semibold">{userDetail.username}</p>
+                        <p>{userDetail.email}</p>
+                        <p className="text-sm text-gray-500">ID: {userId}</p>
+                      </div>
+                    </div>
+                    
+                    {userBetsList.length > 0 ? (
+                      <div>
+                        <h3 className="font-semibold mb-2 text-lg">Bets</h3>
+                        <div className="grid gap-3">
+                          {userBetsList.map((bet, index) => {
+                            const betItem = parseItemString(bet.item);
+                            return (
+                              <div key={index} className="bg-gray-50 p-3 rounded">
+                                <p><span className="font-medium">Round:</span> {bet.round_count}</p>
+                                <p><span className="font-medium">Amount:</span> {bet.amount}</p>
+                                <p><span className="font-medium">Selected Item:</span> {betItem.name} (Odds: {betItem.odds})</p>
+                                <p><span className="font-medium">Transaction:</span> {bet.transaction_id}</p>
+                                <p>
+                                  <span className="font-medium">Status:</span> 
+                                  <span className={bet.transactionDetails.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}>
+                                    {bet.transactionDetails.status}
+                                  </span>
+                                </p>
+                                {gameDetails.winners.some(w => w.userId === userId) && (
+                                  <p className="text-green-600 font-bold mt-1">WINNER</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p>No bets found for this user</p>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p>No participants found</p>
-          )}
-        </div>
-        
-        {/* Bet Information */}
-        <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-2">Bet Information</h2>
-          {gameDetails.bets?.userDetails && gameDetails.bets.userDetails.length > 0 ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">User Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {gameDetails.bets.userDetails.map((user) => (
-                  <div key={user._id} className="border p-3 rounded flex items-center gap-3">
-                    {user.profile_pic?.Location && (
-                      <Image 
-                        src={user.profile_pic.Location} 
-                        alt={user.username}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                    )}
-                    <div>
-                      <p><span className="font-medium">Username:</span> {user.username}</p>
-                      <p><span className="font-medium">Email:</span> {user.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <h3 className="text-lg font-semibold mt-4">Transaction Details</h3>
-              {gameDetails.bets.transactionDetails && gameDetails.bets.transactionDetails.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="py-2 px-4 text-left">Transaction ID</th>
-                        <th className="py-2 px-4 text-left">Amount</th>
-                        <th className="py-2 px-4 text-left">Status</th>
-                        <th className="py-2 px-4 text-left">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {gameDetails.bets.transactionDetails.map((transaction, index) => (
-                        <tr key={index} className="border-t">
-                          <td className="py-2 px-4">{transaction._id}</td>
-                          <td className="py-2 px-4">{transaction.amount}</td>
-                          <td className="py-2 px-4">{transaction.status}</td>
-                          <td className="py-2 px-4">{new Date(transaction.createdAt).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p>No transaction details available</p>
-              )}
-            </div>
-          ) : (
-            <p>No bet information available</p>
           )}
         </div>
       </div>

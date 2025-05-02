@@ -12,6 +12,22 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { motion } from 'framer-motion'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 // Define TronLink types
 declare global {
@@ -110,7 +126,9 @@ export default function PlayPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  // const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [round2Modal, setRound2Modal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState("");
+  const [currentGame, setCurrentGame] = useState<Game | null>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -452,15 +470,34 @@ export default function PlayPage() {
     return null;
   };
 
-  // Update handleEnterRound2 function to include game_id in the payload
-  const handleEnterRound2 = async (betAmount: number, gameId: string) => {
+  // Function to open the Round 2 modal with game data
+  const openRound2Modal = (betAmount: number, game: Game) => {
+    setCurrentGame(game);
+    setRound2Modal(true);
+  };
+
+  // New function to actually enter Round 2 with selected item
+  const confirmEnterRound2 = async (gameId: string, itemId: string) => {
     if (!session?.user?.authToken) {
       toast.error('You must be logged in to enter Round 2');
       return;
     }
 
+    if (!itemId || !gameId) {
+      toast.error('Please select an item to place your bet on');
+      return;
+    }
+
     try {
       toast.loading('Processing your request...');
+      
+      // Find the selected item from the game
+      const selectedItemObj = currentGame?.items.find(item => item._id === itemId);
+      
+      if (!selectedItemObj) {
+        toast.error('Selected item not found');
+        return;
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/v1/game/enter-final-round`, {
         method: 'POST',
@@ -469,8 +506,8 @@ export default function PlayPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount: betAmount,
-          game_id: gameId
+          game_id: gameId,
+          item: selectedItemObj
         })
       });
 
@@ -485,8 +522,8 @@ export default function PlayPage() {
       toast.dismiss();
       toast.success('You have successfully entered Round 2! Please wait for the spin.');
       
-      // No longer need to set inRound2
-      // setInRound2(true);
+      // Close modal
+      setRound2Modal(false);
       
       // Refresh games list to show updated status
       fetchGames();
@@ -614,7 +651,7 @@ export default function PlayPage() {
                                   </Button>
                                   <Button 
                                     className="bg-purple-700 text-white font-bold hover:bg-purple-800"
-                                    onClick={() => betAmount && handleEnterRound2(betAmount, mostRecentGame._id)}
+                                    onClick={() => betAmount && mostRecentGame && openRound2Modal(betAmount, mostRecentGame)}
                                   >
                                     Play Round 2
                                   </Button>
@@ -805,7 +842,7 @@ export default function PlayPage() {
                                       <Button 
                                         className="w-1/2 bg-purple-700 hover:bg-purple-800" 
                                         size="sm"
-                                        onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount, game._id)}
+                                        onClick={() => checkUserWin(game)?.betAmount && openRound2Modal(checkUserWin(game)!.betAmount, game)}
                                       >
                                         Play Round 2
                                       </Button>
@@ -982,7 +1019,7 @@ export default function PlayPage() {
                                         <Button 
                                           className="w-1/2 bg-purple-700 hover:bg-purple-800" 
                                           size="sm"
-                                          onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount, game._id)}
+                                          onClick={() => checkUserWin(game)?.betAmount && openRound2Modal(checkUserWin(game)!.betAmount, game)}
                                         >
                                           Play Round 2
                                         </Button>
@@ -1128,6 +1165,61 @@ export default function PlayPage() {
           </div>
         </div>
       </footer>
+
+      {/* Round 2 Entry Modal */}
+      <Dialog open={round2Modal} onOpenChange={setRound2Modal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Round 2 - High Stakes Game</DialogTitle>
+            <DialogDescription>
+              <div className="mt-2 space-y-3">
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800">
+                  <p className="font-medium mb-1">Warning!</p>
+                  <p className="text-sm">If you lose this round, your previous winnings will be lost.</p>
+                </div>
+                <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-800">
+                  <p className="font-medium mb-1">Potential Reward</p>
+                  <p className="text-sm">If you win, your amount would be 25x instead of 5x!</p>
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="item">Select Number to Bet On</Label>
+              <Select value={selectedItem} onValueChange={setSelectedItem}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a number" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentGame?.items.map((item) => (
+                    <SelectItem key={item._id} value={item._id}>
+                      Number {item.name} (Odds: {item.odds}x)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setRound2Modal(false)}
+              className="sm:w-1/2"
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="bg-purple-700 hover:bg-purple-800 sm:w-1/2"
+              onClick={() => currentGame && confirmEnterRound2(currentGame._id, selectedItem)}
+            >
+              Confirm Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -100,7 +100,13 @@ export default function GamesPage() {
       const responseData: GamesResponse = await response.json()
 
       if (responseData.data && responseData.data.records) {
-        setGames(responseData.data.records)
+        // Remove duplicate games by ID
+        const uniqueGamesMap = new Map();
+        responseData.data.records.forEach(game => {
+          uniqueGamesMap.set(game._id, game);
+        });
+        
+        setGames(Array.from(uniqueGamesMap.values()));
       } else {
         setError('Unexpected API response format')
       }

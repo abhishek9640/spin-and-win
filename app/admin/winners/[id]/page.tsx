@@ -250,92 +250,136 @@ const GameDetailsPage = () => {
     <div className="container mx-auto p-6">
       <button
         onClick={handleBack}
-        className="mb-4 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded"
+        className="mb-6 bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-md font-medium transition duration-200 flex items-center"
       >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        </svg>
         Back to Games
       </button>
       
-      <h1 className="text-2xl font-bold mb-6">Game Details</h1>
+      <h1 className="text-3xl font-bold mb-8 text-gray-800 border-b pb-4">Game Details</h1>
       
-      <div className="grid gap-6">
+      <div className="grid gap-8">
         {/* Game Info */}
-        <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-2">Game Information</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <p><span className="font-medium">Game ID:</span> {gameDetails._id}</p>
-            <p><span className="font-medium">Status:</span> {gameDetails.status}</p>
-            <p><span className="font-medium">Round:</span> {gameDetails.round}</p>
-            <p><span className="font-medium">Created:</span> {new Date(gameDetails.createdAt).toLocaleString()}</p>
-            <p><span className="font-medium">Updated:</span> {new Date(gameDetails.updatedAt).toLocaleString()}</p>
-            <p><span className="font-medium">Settled:</span> {gameDetails.is_settled_winning_price ? 'Yes' : 'No'}</p>
+        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-100">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Game Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-4 rounded-md">
+              <p className="mb-2"><span className="font-semibold text-gray-700">Game ID:</span> <span className="text-gray-900">{gameDetails._id}</span></p>
+              <p className="mb-2"><span className="font-semibold text-gray-700">Status:</span> 
+                <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  gameDetails.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                  gameDetails.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {gameDetails.status}
+                </span>
+              </p>
+              <p className="mb-2"><span className="font-semibold text-gray-700">Round:</span> <span className="font-mono text-gray-900">{gameDetails.round}</span></p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-md">
+              <p className="mb-2"><span className="font-semibold text-gray-700">Created:</span> <span className="text-gray-900">{new Date(gameDetails.createdAt).toLocaleString()}</span></p>
+              <p className="mb-2"><span className="font-semibold text-gray-700">Updated:</span> <span className="text-gray-900">{new Date(gameDetails.updatedAt).toLocaleString()}</span></p>
+              <p className="mb-2"><span className="font-semibold text-gray-700">Settled:</span> 
+                <span className={`ml-2 ${gameDetails.is_settled_winning_price ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}`}>
+                  {gameDetails.is_settled_winning_price ? 'Yes' : 'No'}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
         
         {/* Items */}
-        <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-2">Items</h2>
+        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-100">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Items</h2>
           {Array.isArray(gameDetails.items) && gameDetails.items.length > 0 ? (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {gameDetails.items.map((item) => (
                 <div 
                   key={item._id}
-                  className={`border p-3 rounded ${Array.isArray(gameDetails.winning_items) && 
-                    gameDetails.winning_items.some(wi => wi._id === item._id) ? 'bg-green-100 border-green-500' : ''}`}
+                  className={`border p-4 rounded-lg ${
+                    Array.isArray(gameDetails.winning_items) && 
+                    gameDetails.winning_items.some(wi => wi._id === item._id) 
+                      ? 'bg-green-50 border-green-300 shadow' 
+                      : 'bg-white border-gray-200'
+                  }`}
                 >
-                  <p><span className="font-medium">Name:</span> {item.name}</p>
-                  <p><span className="font-medium">Odds:</span> {item.odds}</p>
+                  <p className="text-lg font-semibold mb-1">{item.name}</p>
+                  <p className="text-gray-600">Odds: <span className="font-mono font-medium">{item.odds}</span></p>
                   {Array.isArray(gameDetails.winning_items) && 
                     gameDetails.winning_items.some(wi => wi._id === item._id) && (
-                    <p className="text-green-600 font-bold mt-2">WINNER</p>
+                    <div className="mt-2 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-green-600 font-semibold">WINNER</span>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <p>No items available</p>
+            <p className="text-gray-500 italic">No items available</p>
           )}
         </div>
         
         {/* Winners */}
-        <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-2">Winners</h2>
+        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-100">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Winners</h2>
           {Array.isArray(gameDetails.winners) && gameDetails.winners.length > 0 ? (
             <div className="space-y-4">
               {gameDetails.winners.map((winner, index) => {
                 const user = getWinnerDetails(winner.userId);
                 return (
-                  <div key={winner._id || index} className="border p-3 rounded">
-                    <div className="flex items-center gap-3">
-                      {user?.profile_pic?.Location && (
-                        <Image 
-                          src={user.profile_pic.Location} 
-                          alt={user.username}
-                          width={48}
-                          height={48}
-                          className="rounded-full"
-                        />
-                      )}
-                      <div>
-                        <p><span className="font-medium">User:</span> {user?.username || winner.userId}</p>
-                        {user?.email && <p><span className="font-medium">Email:</span> {user.email}</p>}
+                  <div key={winner._id || index} className="border border-green-200 bg-green-50 p-5 rounded-lg shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="flex items-center gap-4">
+                        {user?.profile_pic?.Location && (
+                          <div className="relative">
+                            <Image 
+                              src={user.profile_pic.Location} 
+                              alt={user.username}
+                              width={64}
+                              height={64}
+                              className="rounded-full border-2 border-green-300"
+                            />
+                            <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-800">{user?.username || "Unknown User"}</h3>
+                          {user?.email && <p className="text-gray-600">{user.email}</p>}
+                          {user?.phone_number && <p className="text-gray-600">{user.phone_number}</p>}
+                          {user?.gender && <p className="text-gray-600">Gender: {user.gender}</p>}
+                          {user?.crypto_address && (
+                            <p className="text-gray-600 text-sm mt-1">
+                              Crypto: <span className="font-mono text-xs">{user.crypto_address}</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-2">
-                      <p><span className="font-medium">Winning Item:</span> {winner.item?.name} (Odds: {winner.item?.odds})</p>
-                      <p><span className="font-medium">Amount Won:</span> {winner.amountWon}</p>
+                      <div className="md:ml-auto bg-white rounded-lg p-4 shadow-sm">
+                        <p className="text-gray-700 font-medium">Winning Item: <span className="text-green-600 font-bold">{winner.item?.name}</span></p>
+                        <p className="text-gray-700 font-medium">Odds: <span className="font-mono font-bold">{winner.item?.odds}</span></p>
+                        <p className="text-gray-700 font-medium">Amount Won: <span className="text-green-600 font-bold">${winner.amountWon.toFixed(2)}</span></p>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <p>No winners yet</p>
+            <p className="text-gray-500 italic">No winners yet</p>
           )}
         </div>
         
         {/* Participants and Bets */}
-        <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-bold mb-2">Participants and Bets</h2>
+        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-100">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Participants and Bets</h2>
           {gameDetails.users && gameDetails.users.length > 0 ? (
             <div className="space-y-6">
               {gameDetails.users.map(userId => {
@@ -344,45 +388,111 @@ const GameDetailsPage = () => {
                 
                 if (!userDetail) return null;
                 
+                const isWinner = gameDetails.winners.some(w => w.userId === userId);
+                
                 return (
-                  <div key={userId} className="border p-4 rounded">
-                    <div className="flex items-center gap-3 mb-4">
+                  <div key={userId} className={`border p-6 rounded-lg ${isWinner ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
                       {userDetail.profile_pic?.Location && (
                         <Image 
                           src={userDetail.profile_pic.Location} 
                           alt={userDetail.username}
-                          width={48}
-                          height={48}
-                          className="rounded-full"
+                          width={80}
+                          height={80}
+                          className="rounded-full border-2 border-gray-200"
                         />
                       )}
-                      <div>
-                        <p className="text-lg font-semibold">{userDetail.username}</p>
-                        <p>{userDetail.email}</p>
-                        <p className="text-sm text-gray-500">ID: {userId}</p>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-bold text-gray-800">{userDetail.username}</h3>
+                          {isWinner && (
+                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Winner
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-600">{userDetail.email}</p>
+                        <p className="text-gray-600">{userDetail.phone_number}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            {userDetail.gender}
+                          </span>
+                          <span className={`text-xs font-medium px-2.5 py-0.5 rounded ${
+                            userDetail.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {userDetail.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                          <span className={`text-xs font-medium px-2.5 py-0.5 rounded ${
+                            userDetail.is_email_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {userDetail.is_email_verified ? 'Verified' : 'Unverified'}
+                          </span>
+                          <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            {userDetail.role}
+                          </span>
+                        </div>
+                        {userDetail.crypto_address && (
+                          <p className="text-gray-500 text-xs mt-1">
+                            <span className="font-medium">Crypto Address:</span>{' '}
+                            <span className="font-mono">{userDetail.crypto_address}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
                     
                     {userBetsList.length > 0 ? (
                       <div>
-                        <h3 className="font-semibold mb-2 text-lg">Bets</h3>
-                        <div className="grid gap-3">
+                        <h3 className="font-semibold mb-3 text-lg text-gray-700 border-b pb-2">Bets History</h3>
+                        <div className="grid gap-4 md:grid-cols-2">
                           {userBetsList.map((bet, index) => {
                             const betItem = parseItemString(bet.item);
+                            const isWinningBet = gameDetails.winning_items.some(wi => wi._id === betItem._id);
+                            
                             return (
-                              <div key={index} className="bg-gray-50 p-3 rounded">
-                                <p><span className="font-medium">Round:</span> {bet.round_count}</p>
-                                <p><span className="font-medium">Amount:</span> {bet.amount}</p>
-                                <p><span className="font-medium">Selected Item:</span> {betItem.name} (Odds: {betItem.odds})</p>
-                                <p><span className="font-medium">Transaction:</span> {bet.transaction_id}</p>
-                                <p>
-                                  <span className="font-medium">Status:</span> 
-                                  <span className={bet.transactionDetails.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}>
+                              <div 
+                                key={index} 
+                                className={`p-4 rounded-lg ${
+                                  isWinningBet ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                                }`}
+                              >
+                                <div className="flex justify-between mb-2">
+                                  <span className="font-semibold text-gray-700">Round {bet.round_count}</span>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    bet.transactionDetails.status === 'completed' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
                                     {bet.transactionDetails.status}
                                   </span>
+                                </div>
+                                
+                                <p className="text-gray-700">Amount: <span className="font-bold">${bet.amount.toFixed(2)}</span></p>
+                                
+                                <div className="mt-2 p-2 bg-white rounded border border-gray-100">
+                                  <p className="text-gray-700">Selected Item: <span className="font-medium">{betItem.name}</span></p>
+                                  <p className="text-gray-700">Odds: <span className="font-mono">{betItem.odds}</span></p>
+                                </div>
+                                
+                                <p className="mt-2 text-gray-600 text-xs">
+                                  <span className="font-medium">Transaction:</span>{' '}
+                                  <span className="font-mono">{bet.transaction_id}</span>
                                 </p>
-                                {gameDetails.winners.some(w => w.userId === userId) && (
-                                  <p className="text-green-600 font-bold mt-1">WINNER</p>
+                                
+                                <p className="text-gray-600 text-xs">
+                                  <span className="font-medium">Date:</span>{' '}
+                                  <span>{new Date(bet.transactionDetails.createdAt).toLocaleString()}</span>
+                                </p>
+                                
+                                {isWinningBet && (
+                                  <div className="mt-2 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="text-green-600 font-semibold">Winning Bet</span>
+                                  </div>
                                 )}
                               </div>
                             );
@@ -390,14 +500,14 @@ const GameDetailsPage = () => {
                         </div>
                       </div>
                     ) : (
-                      <p>No bets found for this user</p>
+                      <p className="text-gray-500 italic">No bets found for this user</p>
                     )}
                   </div>
                 );
               })}
             </div>
           ) : (
-            <p>No participants found</p>
+            <p className="text-gray-500 italic">No participants found</p>
           )}
         </div>
       </div>

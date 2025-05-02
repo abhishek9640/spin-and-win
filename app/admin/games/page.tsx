@@ -159,40 +159,6 @@ export default function GamesPage() {
     }
   }
 
-  const handleSettlePayment = async (gameId: string) => {
-    if (!session?.user?.authToken) return
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/pay-to-winners`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `${session.user.authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ game_id: gameId })
-      })
-
-      if (!response.ok) throw new Error('Failed to settle payment')
-
-      const data = await response.json()
-      if (data.success) {
-        toast({
-          title: "Payment Settled",
-          description: "Winners have been paid successfully.",
-        })
-        fetchGames()
-      } else {
-        throw new Error(data.message || 'Failed to settle payment')
-      }
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Payment failed",
-        variant: "destructive",
-      })
-    }
-  }
-
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -226,110 +192,64 @@ export default function GamesPage() {
           <p className="text-gray-500">No games found. Create your first game to get started!</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.map((game) => (
-            <Card key={game._id} className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-semibold">{game.name || `Game ${game._id.slice(-4)}`}</h3>
-                <span className={`px-2 py-1 rounded text-sm ${
-                  game.status === 'active' ? 'bg-green-100 text-green-800' :
-                  game.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  game.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {game.status || 'unknown'}
-                </span>
-              </div>
-
-              <p className="text-gray-600 mb-4">{game.description || 'No description provided'}</p>
-
-              <div className="mb-4">
-                <h4 className="font-medium mb-2">Wheel Numbers:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {game.items.map((item, index) => (
-                    <span key={index} className="bg-gray-100 text-black px-2 py-1 rounded">
-                      {item.name}
+        <>
+          {/* Active/Pending Games Section */}
+          <div className="mb-10">
+            <h2 className="text-2xl font-semibold mb-4">Active & Pending Games</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {games.filter(game => game.status !== "completed").map((game) => (
+                <Card key={game._id} className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold">{game.name || `Game ${game._id.slice(-4)}`}</h3>
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      game.status === 'active' ? 'bg-green-100 text-green-800' :
+                      game.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {game.status || 'unknown'}
                     </span>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              <div className="text-sm text-gray-500 mb-4">
-                Created: {game.createdAt ? new Date(game.createdAt).toLocaleDateString() : 'Unknown date'}
-              </div>
+                  <p className="text-gray-600 mb-4">{game.description || 'No description provided'}</p>
 
-              <div className="flex justify-end space-x-2">
-                {game.status === "completed" ? (
-                  <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive">Settle Payment</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Confirm Payment Settlement</DialogTitle>
-                      <DialogDescription>
-                        Are you sure you want to settle payment for {game.name || `Game ${game._id.slice(-4)}`}? This will send payouts to the winners.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex justify-end space-x-2 mt-4">
-                      <Button variant="outline">Cancel</Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleSettlePayment(game._id)}
-                      >
-                        Confirm
-                      </Button>
+                  <div className="mb-4">
+                    <h4 className="font-medium mb-2">Wheel Numbers:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {game.items.map((item, index) => (
+                        <span key={index} className="bg-gray-100 text-black px-2 py-1 rounded">
+                          {item.name}
+                        </span>
+                      ))}
                     </div>
-                  </DialogContent>
-                </Dialog>
-                
-                ) : (
-                  <Dialog open={!!selectedGame} onOpenChange={(open) => !open && setSelectedGame(null)}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => setSelectedGame(game)}
-                      >
-                        Spin Wheel
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Spin the Wheel</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to spin the wheel for {selectedGame?.name || `Game ${selectedGame?._id.slice(-4)}`}?
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="flex flex-col items-center space-y-4">
-                        {!winningItem ? (
-                          <div className="flex justify-end space-x-2 mt-4 w-full">
-                            <Button variant="outline" onClick={() => setSelectedGame(null)}>Cancel</Button>
-                            <Button
-                              onClick={() => handleSpinWheel(selectedGame?._id || '')}
-                              disabled={isSpinning}
-                            >
-                              {isSpinning ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Spinning...
-                                </>
-                              ) : 'Spin Wheel'}
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="w-full p-4 bg-green-50 rounded-lg text-center">
-                              <h3 className="text-xl font-bold text-green-700 mb-2">Winning Number!</h3>
-                              <div className="text-4xl font-bold text-green-800">{winningItem.name}</div>
-                              <p className="text-sm text-green-600 mt-1">Odds: x{winningItem.odds}</p>
-                            </div>
+                  </div>
+
+                  <div className="text-sm text-gray-500 mb-4">
+                    Created: {game.createdAt ? new Date(game.createdAt).toLocaleDateString() : 'Unknown date'}
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Dialog open={!!selectedGame} onOpenChange={(open) => !open && setSelectedGame(null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectedGame(game)}
+                        >
+                          Spin Wheel
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Spin the Wheel</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to spin the wheel for {selectedGame?.name || `Game ${selectedGame?._id.slice(-4)}`}?
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center space-y-4">
+                          {!winningItem ? (
                             <div className="flex justify-end space-x-2 mt-4 w-full">
+                              <Button variant="outline" onClick={() => setSelectedGame(null)}>Cancel</Button>
                               <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setWinningItem(null)
-                                  handleSpinWheel(selectedGame?._id || '')
-                                }}
+                                onClick={() => handleSpinWheel(selectedGame?._id || '')}
                                 disabled={isSpinning}
                               >
                                 {isSpinning ? (
@@ -337,28 +257,97 @@ export default function GamesPage() {
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Spinning...
                                   </>
-                                ) : 'Spin Again'}
-                              </Button>
-                              <Button
-                                variant="default"
-                                onClick={() => {
-                                  setSelectedGame(null)
-                                  setWinningItem(null)
-                                }}
-                              >
-                                Close
+                                ) : 'Spin Wheel'}
                               </Button>
                             </div>
-                          </>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
+                          ) : (
+                            <>
+                              <div className="w-full p-4 bg-green-50 rounded-lg text-center">
+                                <h3 className="text-xl font-bold text-green-700 mb-2">Winning Number!</h3>
+                                <div className="text-4xl font-bold text-green-800">{winningItem.name}</div>
+                                <p className="text-sm text-green-600 mt-1">Odds: x{winningItem.odds}</p>
+                              </div>
+                              <div className="flex justify-end space-x-2 mt-4 w-full">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setWinningItem(null)
+                                    handleSpinWheel(selectedGame?._id || '')
+                                  }}
+                                  disabled={isSpinning}
+                                >
+                                  {isSpinning ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Spinning...
+                                    </>
+                                  ) : 'Spin Again'}
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  onClick={() => {
+                                    setSelectedGame(null)
+                                    setWinningItem(null)
+                                  }}
+                                >
+                                  Close
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            {games.filter(game => game.status !== "completed").length === 0 && (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500">No active or pending games.</p>
+              </Card>
+            )}
+          </div>
+
+          {/* Completed Games Section */}
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Completed Games</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {games.filter(game => game.status === "completed").map((game) => (
+                <Card key={game._id} className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold">{game.name || `Game ${game._id.slice(-4)}`}</h3>
+                    <span className="px-2 py-1 rounded text-sm bg-blue-100 text-blue-800">
+                      {game.status || 'unknown'}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-600 mb-4">{game.description || 'No description provided'}</p>
+
+                  <div className="mb-4">
+                    <h4 className="font-medium mb-2">Wheel Numbers:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {game.items.map((item, index) => (
+                        <span key={index} className="bg-gray-100 text-black px-2 py-1 rounded">
+                          {item.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-500 mb-4">
+                    Created: {game.createdAt ? new Date(game.createdAt).toLocaleDateString() : 'Unknown date'}
+                  </div>
+                </Card>
+              ))}
+            </div>
+            {games.filter(game => game.status === "completed").length === 0 && (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500">No completed games.</p>
+              </Card>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

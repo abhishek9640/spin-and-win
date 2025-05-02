@@ -300,7 +300,24 @@ export default function PlayPage() {
     }
   };
 
-  // Fetch games from the API
+  // Add a function to check if a specific game has a user in Round 2
+  const isUserInRound2ForGame = (game: Game): boolean => {
+    if (!userId || !game.userBets || game.userBets.length < 2) {
+      return false;
+    }
+
+    // Count the number of bets for this user in this game
+    const userBetsForThisGame = game.userBets.filter(bet => bet.userId === userId);
+    
+    // Check if there are at least 2 bets for this user, and at least one has round_count=2
+    const hasRound1Bet = userBetsForThisGame.some(bet => bet.round_count === 1);
+    const hasRound2Bet = userBetsForThisGame.some(bet => bet.round_count === 2);
+    
+    // User is in Round 2 if they have both a Round 1 and Round 2 bet in the same game
+    return hasRound1Bet && hasRound2Bet;
+  };
+
+  // Update the fetchGames function to check for duplicates correctly
   const fetchGames = async () => {
     if (sessionStatus !== 'authenticated' || !session?.user?.authToken) {
       setLoading(false);
@@ -341,6 +358,13 @@ export default function PlayPage() {
           setUserId(gameWithBets.bets[0].userId);
           console.log('User ID extracted:', gameWithBets.bets[0].userId);
         }
+        
+        // For global Round 2 state, check if ANY game has the user in Round 2
+        const anyRound2Game = responseData.data.records.some(game => isUserInRound2ForGame(game));
+        
+        if (anyRound2Game) {
+          console.log('User is in Round 2 for at least one game');
+        }
       } else {
         console.error('Unexpected API response structure:', responseData);
         setError('Unexpected API response format');
@@ -366,21 +390,32 @@ export default function PlayPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
 
-  // Modify the checkUserWin function to include the first winning item when user loses
+  // Modify the checkUserWin function to check for Round 2 bets
   const checkUserWin = (game: Game) => {
     // If there are no winning items yet or no user bets, return null
-    if (!userId || !game.userBets) {
+    if (!userId || (!game.userBets && !game.bets)) {
       return null;
     }
 
-    // Find the user's bet
-    const userBet = game.userBets.find(bet => bet.userId === userId);
-    if (!userBet) return null;
+    // Find user's bets from userBets first, or fall back to bets array
+    const userBetsArray = game.userBets || [];
+    
+    // Find the user's bet - prioritize round_count=1 bets for regular evaluation
+    const userBet = userBetsArray.find(bet => 
+      bet.userId === userId && bet.round_count === 1
+    );
+    
+    if (!userBet) {
+      // If no bet found in userBets, check regular bets array
+      const regularBet = game.bets?.find(bet => bet.userId === userId);
+      if (!regularBet) return null;
+    }
 
     // Parse the bet item
     let betItem;
     try {
-      betItem = typeof userBet.item === 'string' ? JSON.parse(userBet.item) : userBet.item;
+      const betItemStr = userBet ? userBet.item : game.bets?.find(bet => bet.userId === userId)?.item;
+      betItem = typeof betItemStr === 'string' ? JSON.parse(betItemStr) : betItemStr;
     } catch {
       return null;
     }
@@ -392,19 +427,21 @@ export default function PlayPage() {
       
       if (winningItem) {
         // User won
-        const winAmount = userBet.amount * 5;
+        const betAmount = userBet ? userBet.amount : game.bets?.find(bet => bet.userId === userId)?.amount || 0;
+        const winAmount = betAmount * 5;
         return {
           won: true,
-          betAmount: userBet.amount,
+          betAmount,
           winAmount,
           betItem,
           winningItem
         };
       } else {
-        // User lost - include the first winning item for display
+        // User lost
+        const betAmount = userBet ? userBet.amount : game.bets?.find(bet => bet.userId === userId)?.amount || 0;
         return {
           won: false,
-          betAmount: userBet.amount,
+          betAmount,
           betItem,
           winningItem: game.winning_items[0] // First winning item
         };
@@ -415,8 +452,8 @@ export default function PlayPage() {
     return null;
   };
 
-  // Add handleEnterRound2 function to the PlayPage component
-  const handleEnterRound2 = async (betAmount: number) => {
+  // Update handleEnterRound2 function to include game_id in the payload
+  const handleEnterRound2 = async (betAmount: number, gameId: string) => {
     if (!session?.user?.authToken) {
       toast.error('You must be logged in to enter Round 2');
       return;
@@ -432,7 +469,8 @@ export default function PlayPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount: betAmount
+          amount: betAmount,
+          game_id: gameId
         })
       });
 
@@ -445,9 +483,12 @@ export default function PlayPage() {
       console.log('Round 2 entry response:', data);
       
       toast.dismiss();
-      toast.success('You have successfully entered Round 2!');
+      toast.success('You have successfully entered Round 2! Please wait for the spin.');
       
-      // Refresh games list to show Round 2 games
+      // No longer need to set inRound2
+      // setInRound2(true);
+      
+      // Refresh games list to show updated status
       fetchGames();
     } catch (error) {
       toast.dismiss();
@@ -501,24 +542,34 @@ export default function PlayPage() {
 
           {/* Round 2 Qualification Banner */}
           {games.some(game => game.round === 2 && game.status !== 'completed') && (() => {
-            // Find a game that the user has won
-            const userWonGame = games.find(game => {
-              const result = checkUserWin(game);
-              return result && result.won === true;
+            // Only proceed if we have games
+            if (!games.length) return null;
+
+            // First, sort games by creation date (newest first) to find the most recent game
+            const sortedGames = [...games].sort((a, b) => {
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
             });
             
-            // Only show qualification banner if user has won a game
-            if (!userWonGame) return null;
+            // Get the most recent game regardless of win status
+            const mostRecentGame = sortedGames[0];
+            
+            // Check if the most recent game is a win
+            const winResult = checkUserWin(mostRecentGame);
+            const isWin = winResult && winResult.won === true;
+            
+            // Only show qualification banner if the most recent game is a win
+            if (!isWin) return null;
+            
+            console.log("Most recent game is a win:", mostRecentGame._id);
             
             // Get the bet amount from the won game
-            let betAmount = null;
-            let winAmount = null;
+            const betAmount = winResult.betAmount;
+            const winAmount = winResult.winAmount;
             
-            const winResult = checkUserWin(userWonGame);
-            if (winResult && winResult.won) {
-              betAmount = winResult.betAmount;
-              winAmount = winResult.winAmount;
-            }
+            // Check if user is already in Round 2 for this specific game
+            const isInRound2ForThisGame = isUserInRound2ForGame(mostRecentGame);
             
             return (
               <motion.div
@@ -529,31 +580,57 @@ export default function PlayPage() {
               >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="flex items-center">
-                    <div className="mr-4 bg-white bg-opacity-20 p-3 rounded-full">
+                    {/* <div className="mr-4 bg-white bg-opacity-20 p-3 rounded-full">
                       <Trophy className="h-8 w-8" />
-                    </div>
+                    </div> */}
                     <div>
                       <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
                       <p className="text-white text-opacity-90 max-w-xl">
                         You&apos;ve qualified for Round 2 exclusive games with higher stakes and bigger rewards.<br />
                         {betAmount && winAmount && (
                           <>
-                            <span className="block mt-2 text-lg font-semibold text-yellow-200">You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> (5x your bet of {betAmount} USDT)!</span>
-                            <span className="block mt-2">You can <span className="font-bold">opt out</span> and take your winnings, or <span className="font-bold">play for Round 2</span> to 25x your amount!</span>
-                            <div className="flex gap-4 mt-4">
-                              <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">Opt Out &amp; Take Winnings</Button>
-                              <Button className="bg-purple-700 text-white font-bold hover:bg-purple-800">Play Round 2</Button>
-                            </div>
+                            <span className="block mt-2 text-lg font-semibold text-yellow-200">
+                              You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> (5x your bet of {betAmount} USDT)!
+                            </span>
+                            
+                            {/* Show different content based on Round 2 status */}
+                            {isInRound2ForThisGame ? (
+                              <div className="mt-4 p-3 bg-purple-900/30 rounded-lg">
+                                <span className="block mb-2">You have entered Round 2!</span>
+                                <div className="flex items-center justify-center bg-purple-800/50 p-2 rounded animate-pulse">
+                                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                  <span>Waiting for Round 2 spin...</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="block mt-2">
+                                  You can <span className="font-bold">opt out</span> and take your winnings, 
+                                  or <span className="font-bold">play for Round 2</span> to 25x your amount!
+                                </span>
+                                <div className="flex gap-4 mt-4">
+                                  <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">
+                                    Opt Out &amp; Take Winnings
+                                  </Button>
+                                  <Button 
+                                    className="bg-purple-700 text-white font-bold hover:bg-purple-800"
+                                    onClick={() => betAmount && handleEnterRound2(betAmount, mostRecentGame._id)}
+                                  >
+                                    Play Round 2
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </>
                         )}
                       </p>
                     </div>
                   </div>
-                  <div className="hidden md:block">
+                  {/* <div className="hidden md:block">
                     <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/50 text-sm px-4 py-2">
                       VIP PLAYER STATUS
                     </Badge>
-                  </div>
+                  </div> */}
                 </div>
               </motion.div>
             );
@@ -627,6 +704,12 @@ export default function PlayPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {games
                     .filter(game => game.round !== 2)
+                    .sort((a, b) => {
+                      // Sort by creation date in descending order (newest first)
+                      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return dateB - dateA;
+                    })
                     .map((game, i) => (
                       <motion.div
                         key={game._id}
@@ -691,7 +774,7 @@ export default function PlayPage() {
                               </div>
                             )}
                             
-                            {/* Winning or Losing Notification */}
+                            {/* Winning or Losing Notification - First occurrence */}
                             {checkUserWin(game) && (
                               checkUserWin(game)?.won ? (
                                 <div className="mt-4 p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-md text-white">
@@ -705,18 +788,29 @@ export default function PlayPage() {
                                   <p className="text-lg font-bold mb-3">
                                     You won {checkUserWin(game)?.winAmount} USDT! (5x your bet of {checkUserWin(game)?.betAmount} USDT)
                                   </p>
-                                  <div className="flex gap-2 mt-2">
-                                    <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
-                                      Withdraw Winnings
-                                    </Button>
-                                    <Button 
-                                      className="w-1/2 bg-purple-700 hover:bg-purple-800" 
-                                      size="sm"
-                                      onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount)}
-                                    >
-                                      Play Round 2
-                                    </Button>
-                                  </div>
+                                  
+                                  {/* Show different content based on Round 2 status */}
+                                  {isUserInRound2ForGame(game) ? (
+                                    <div className="mt-2 p-2 bg-purple-700/50 rounded text-center">
+                                      <span className="animate-pulse inline-flex items-center">
+                                        <span className="mr-2">Waiting for Round 2 spin</span>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex gap-2 mt-2">
+                                      <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
+                                        Withdraw Winnings
+                                      </Button>
+                                      <Button 
+                                        className="w-1/2 bg-purple-700 hover:bg-purple-800" 
+                                        size="sm"
+                                        onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount, game._id)}
+                                      >
+                                        Play Round 2
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="mt-4 p-3 bg-gray-100 border border-gray-200 rounded-md">
@@ -753,6 +847,10 @@ export default function PlayPage() {
                                 <Button className="w-full" variant="outline" disabled>
                                   Bet Already Placed
                                 </Button>
+                              ) : isUserInRound2ForGame(game) ? (
+                                <Button className="w-full bg-purple-700 text-white" disabled>
+                                  <span className="animate-pulse">Wait for 2nd spin...</span>
+                                </Button>
                               ) : (
                                 <Button className="w-full" asChild>
                                   <Link href={`/play/${game._id}`}>Play Now</Link>
@@ -780,6 +878,12 @@ export default function PlayPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {games
                       .filter(game => game.round === 2)
+                      .sort((a, b) => {
+                        // Sort by creation date in descending order (newest first)
+                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        return dateB - dateA;
+                      })
                       .map((game, i) => (
                         <motion.div
                           key={game._id}
@@ -847,7 +951,7 @@ export default function PlayPage() {
                                 </div>
                               )}
                               
-                              {/* Winning or Losing Notification */}
+                              {/* Winning or Losing Notification - Second occurrence in VIP games section */}
                               {checkUserWin(game) && (
                                 checkUserWin(game)?.won ? (
                                   <div className="mt-4 p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-md text-white">
@@ -861,18 +965,29 @@ export default function PlayPage() {
                                     <p className="text-lg font-bold mb-3">
                                       You won {checkUserWin(game)?.winAmount} USDT! (5x your bet of {checkUserWin(game)?.betAmount} USDT)
                                     </p>
-                                    <div className="flex gap-2 mt-2">
-                                      <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
-                                        Withdraw Winnings
-                                      </Button>
-                                      <Button 
-                                        className="w-1/2 bg-purple-700 hover:bg-purple-800" 
-                                        size="sm"
-                                        onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount)}
-                                      >
-                                        Play Round 2
-                                      </Button>
-                                    </div>
+                                    
+                                    {/* Show different content based on Round 2 status */}
+                                    {isUserInRound2ForGame(game) ? (
+                                      <div className="mt-2 p-2 bg-purple-700/50 rounded text-center">
+                                        <span className="animate-pulse inline-flex items-center">
+                                          <span className="mr-2">Waiting for Round 2 spin</span>
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex gap-2 mt-2">
+                                        <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
+                                          Withdraw Winnings
+                                        </Button>
+                                        <Button 
+                                          className="w-1/2 bg-purple-700 hover:bg-purple-800" 
+                                          size="sm"
+                                          onClick={() => checkUserWin(game)?.betAmount && handleEnterRound2(checkUserWin(game)!.betAmount, game._id)}
+                                        >
+                                          Play Round 2
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="mt-4 p-3 bg-gray-100 border border-gray-200 rounded-md">
@@ -914,6 +1029,10 @@ export default function PlayPage() {
                                 game.bets && userId && game.bets.some(bet => bet.userId === userId) ? (
                                   <Button className="w-full" variant="outline" disabled>
                                     Bet Already Placed
+                                  </Button>
+                                ) : isUserInRound2ForGame(game) ? (
+                                  <Button className="w-full bg-purple-700 text-white" disabled>
+                                    <span className="animate-pulse">Wait for 2nd spin...</span>
                                   </Button>
                                 ) : (
                                   <Button className="w-full" asChild>

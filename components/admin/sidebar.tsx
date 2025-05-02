@@ -13,6 +13,7 @@ import {
   // ShieldCheck,
   // BarChart3,
   LogOut,
+  Trophy,
 } from "lucide-react"
 
 const menuItems = [
@@ -36,11 +37,11 @@ const menuItems = [
     href: "/admin/transactions",
     icon: WalletCards,
   },
-  // {
-  //   title: "Settings",
-  //   href: "/admin/settings",
-  //   icon: SettingsIcon,
-  // },
+  {
+    title: "Winners",
+    href: "/admin/winners",
+    icon: Trophy,
+  },
   // {
   //   title: "Security",
   //   href: "/admin/security",

@@ -418,8 +418,22 @@ export default function PlayPage() {
     // Find user's bets from userBets first, or fall back to bets array
     const userBetsArray = game.userBets || [];
     
-    // Find the user's bet - prioritize round_count=1 bets for regular evaluation
-    const userBet = userBetsArray.find(bet => 
+    // Determine if we're checking for Round 1 or Round 2
+    // This will control which winning item we check against
+    let isRound2 = false;
+    
+    // Find the user's bet - for Round 2 specifically look for round_count=2
+    const round2Bet = userBetsArray.find(bet => 
+      bet.userId === userId && bet.round_count === 2
+    );
+    
+    // If found a Round 2 bet, we'll be checking against the second winning item
+    if (round2Bet) {
+      isRound2 = true;
+    }
+    
+    // Get the appropriate bet based on which round we're checking
+    const userBet = isRound2 ? round2Bet : userBetsArray.find(bet => 
       bet.userId === userId && bet.round_count === 1
     );
     
@@ -440,19 +454,25 @@ export default function PlayPage() {
 
     // If there are winning items but no match, it's a loss
     if (game.winning_items && game.winning_items.length > 0) {
-      // Check if user's bet matches any winning item
-      const winningItem = game.winning_items.find(item => item.name === betItem.name);
+      // Check if there's a winning item for the round we're checking
+      // For Round 2, use the second winning item (index 1)
+      // For Round 1, use the first winning item (index 0)
+      const winningItemIndex = isRound2 && game.winning_items.length > 1 ? 1 : 0;
+      const winningItem = game.winning_items[winningItemIndex];
       
-      if (winningItem) {
+      if (winningItem && winningItem.name === betItem.name) {
         // User won
         const betAmount = userBet ? userBet.amount : game.bets?.find(bet => bet.userId === userId)?.amount || 0;
-        const winAmount = betAmount * 5;
+        // If in Round 2, multiply by 25 instead of 5
+        const multiplier = isRound2 ? 25 : 5;
+        const winAmount = betAmount * multiplier;
         return {
           won: true,
           betAmount,
           winAmount,
           betItem,
-          winningItem
+          winningItem,
+          isRound2
         };
       } else {
         // User lost
@@ -461,7 +481,8 @@ export default function PlayPage() {
           won: false,
           betAmount,
           betItem,
-          winningItem: game.winning_items[0] // First winning item
+          winningItem: winningItem, // Use the appropriate winning item based on round
+          isRound2
         };
       }
     }
@@ -627,7 +648,7 @@ export default function PlayPage() {
                         {betAmount && winAmount && (
                           <>
                             <span className="block mt-2 text-lg font-semibold text-yellow-200">
-                              You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> (5x your bet of {betAmount} USDT)!
+                              You won <span className="text-2xl text-yellow-300">{winAmount} USDT</span> ({isInRound2ForThisGame && winResult.isRound2 ? '25x' : '5x'} your bet of {betAmount} USDT)!
                             </span>
                             
                             {/* Show different content based on Round 2 status */}
@@ -823,7 +844,7 @@ export default function PlayPage() {
                                     Your bet on <span className="font-bold">Number {checkUserWin(game)?.betItem.name}</span> matches the winning number!
                                   </p>
                                   <p className="text-lg font-bold mb-3">
-                                    You won {checkUserWin(game)?.winAmount} USDT! (5x your bet of {checkUserWin(game)?.betAmount} USDT)
+                                    You won {checkUserWin(game)?.winAmount} USDT! ({checkUserWin(game)?.isRound2 ? '25x' : '5x'} your bet of {checkUserWin(game)?.betAmount} USDT)
                                   </p>
                                   
                                   {/* Show different content based on Round 2 status */}
@@ -1000,7 +1021,7 @@ export default function PlayPage() {
                                       Your bet on <span className="font-bold">Number {checkUserWin(game)?.betItem.name}</span> matches the winning number!
                                     </p>
                                     <p className="text-lg font-bold mb-3">
-                                      You won {checkUserWin(game)?.winAmount} USDT! (5x your bet of {checkUserWin(game)?.betAmount} USDT)
+                                      You won {checkUserWin(game)?.winAmount} USDT! ({checkUserWin(game)?.isRound2 ? '25x' : '5x'} your bet of {checkUserWin(game)?.betAmount} USDT)
                                     </p>
                                     
                                     {/* Show different content based on Round 2 status */}

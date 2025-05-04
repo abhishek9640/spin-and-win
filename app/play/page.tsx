@@ -644,7 +644,7 @@ export default function PlayPage() {
                     <div>
                       <h2 className="text-2xl font-bold mb-1">Congratulations!</h2>
                       <p className="text-white text-opacity-90 max-w-xl">
-                        You&apos;ve qualified for Round 2 exclusive games with higher stakes and bigger rewards.<br />
+                        You&apos;ve qualified<br />
                         {betAmount && winAmount && (
                           <>
                             <span className="block mt-2 text-lg font-semibold text-yellow-200">
@@ -652,13 +652,18 @@ export default function PlayPage() {
                             </span>
                             
                             {/* Show different content based on Round 2 status */}
-                            {isInRound2ForThisGame ? (
+                            {isInRound2ForThisGame && (mostRecentGame.status as string) !== 'completed' ? (
                               <div className="mt-4 p-3 bg-purple-900/30 rounded-lg">
                                 <span className="block mb-2">You have entered Round 2!</span>
                                 <div className="flex items-center justify-center bg-purple-800/50 p-2 rounded animate-pulse">
                                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                                   <span>Waiting for Round 2 spin...</span>
                                 </div>
+                              </div>
+                            ) : isInRound2ForThisGame && (mostRecentGame.status as string) === 'completed' ? (
+                              <div className="mt-4 p-3 bg-green-100 rounded-lg">
+                                <span className="block  text-green-800 font-medium">Round 2 has completed!</span>
+                                {/* <p className="text-sm text-green-700">Check your winnings in the game details below.</p> */}
                               </div>
                             ) : (
                               <>
@@ -667,15 +672,23 @@ export default function PlayPage() {
                                   or <span className="font-bold">play for Round 2</span> to 25x your amount!
                                 </span>
                                 <div className="flex gap-4 mt-4">
-                                  <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">
-                                    Opt Out &amp; Take Winnings
-                                  </Button>
-                                  <Button 
-                                    className="bg-purple-700 text-white font-bold hover:bg-purple-800"
-                                    onClick={() => betAmount && mostRecentGame && openRound2Modal(betAmount, mostRecentGame)}
-                                  >
-                                    Play Round 2
-                                  </Button>
+                                  {(mostRecentGame.status as string) !== 'completed' ? (
+                                    <>
+                                      <Button className="bg-yellow-400 text-black font-bold hover:bg-yellow-500">
+                                        Opt Out &amp; Take Winnings
+                                      </Button>
+                                      <Button 
+                                        className="bg-purple-700 text-white font-bold hover:bg-purple-800"
+                                        onClick={() => betAmount && mostRecentGame && openRound2Modal(betAmount, mostRecentGame)}
+                                      >
+                                        Play Round 2
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <div className="p-3 w-full bg-gray-100 text-gray-600 text-center rounded-md">
+                                      Game Completed
+                                    </div>
+                                  )}
                                 </div>
                               </>
                             )}
@@ -848,14 +861,14 @@ export default function PlayPage() {
                                   </p>
                                   
                                   {/* Show different content based on Round 2 status */}
-                                  {isUserInRound2ForGame(game) ? (
+                                  {isUserInRound2ForGame(game) && (game.status as string) !== 'completed' ? (
                                     <div className="mt-2 p-2 bg-purple-700/50 rounded text-center">
                                       <span className="animate-pulse inline-flex items-center">
                                         <span className="mr-2">Waiting for Round 2 spin</span>
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                       </span>
                                     </div>
-                                  ) : (
+                                  ) : (game.status as string) !== 'completed' ? (
                                     <div className="flex gap-2 mt-2">
                                       <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
                                         Withdraw Winnings
@@ -867,6 +880,10 @@ export default function PlayPage() {
                                       >
                                         Play Round 2
                                       </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="p-2 bg-gray-100 text-gray-600 text-sm text-center rounded-md">
+                                      Game Completed
                                     </div>
                                   )}
                                 </div>
@@ -1025,14 +1042,14 @@ export default function PlayPage() {
                                     </p>
                                     
                                     {/* Show different content based on Round 2 status */}
-                                    {isUserInRound2ForGame(game) ? (
+                                    {isUserInRound2ForGame(game) && (game.status as string) !== 'completed' ? (
                                       <div className="mt-2 p-2 bg-purple-700/50 rounded text-center">
                                         <span className="animate-pulse inline-flex items-center">
                                           <span className="mr-2">Waiting for Round 2 spin</span>
                                           <Loader2 className="h-4 w-4 animate-spin" />
                                         </span>
                                       </div>
-                                    ) : (
+                                    ) : (game.status as string) !== 'completed' ? (
                                       <div className="flex gap-2 mt-2">
                                         <Button className="w-1/2 bg-yellow-400 text-black hover:bg-yellow-500" size="sm">
                                           Withdraw Winnings
@@ -1044,6 +1061,10 @@ export default function PlayPage() {
                                         >
                                           Play Round 2
                                         </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="p-2 bg-gray-100 text-gray-600 text-sm text-center rounded-md">
+                                        Game Completed
                                       </div>
                                     )}
                                   </div>

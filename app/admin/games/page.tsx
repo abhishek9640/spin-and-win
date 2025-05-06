@@ -206,7 +206,7 @@ export default function GamesPage() {
               {games.filter(game => game.status !== "completed").map((game) => (
                 <Card key={game._id} className="p-6">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-semibold">{game.name || `Game ${game._id.slice(-4)}`}</h3>
+                    <h3 className="text-xl font-semibold">{game.name || `SPIN WIN ${game._id.slice(-4)}`}</h3>
                     <span className={`px-2 py-1 rounded text-sm ${
                       game.status === 'active' ? 'bg-green-100 text-green-800' :
                       game.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -247,7 +247,7 @@ export default function GamesPage() {
                         <DialogHeader>
                           <DialogTitle>Spin the Wheel</DialogTitle>
                           <DialogDescription>
-                            Are you sure you want to spin the wheel for {selectedGame?.name || `Game ${selectedGame?._id.slice(-4)}`}?
+                            Are you sure you want to spin the wheel for {selectedGame?.name || `SPIN WIN ${selectedGame?._id.slice(-4)}`}?
                           </DialogDescription>
                         </DialogHeader>
                         <div className="flex flex-col items-center space-y-4">
@@ -322,7 +322,7 @@ export default function GamesPage() {
               {games.filter(game => game.status === "completed").map((game) => (
                 <Card key={game._id} className="p-6">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-semibold">{game.name || `Game ${game._id.slice(-4)}`}</h3>
+                    <h3 className="text-xl font-semibold">{game.name || `SPIN WIN ${game._id.slice(-4)}`}</h3>
                     <span className="px-2 py-1 rounded text-sm bg-blue-100 text-blue-800">
                       {game.status || 'unknown'}
                     </span>

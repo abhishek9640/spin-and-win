@@ -802,7 +802,7 @@ export default function PlayPage() {
                             </div>
                           )}
                           <CardHeader>
-                            <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                            <CardTitle>{game.name || `SPIN WIN ${game._id.slice(-4)}`}</CardTitle>
                             <CardDescription>
                               {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
                             </CardDescription>
@@ -948,7 +948,7 @@ export default function PlayPage() {
               {games.some(game => game.round === 2) && (
                 <div className="mb-10">
                   <h2 className="text-2xl font-bold mb-4 flex items-center mt-10">
-                    VIP Games
+                    Completed Games
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {games
@@ -983,7 +983,7 @@ export default function PlayPage() {
                               </div>
                             )}
                             <CardHeader>
-                              <CardTitle>{game.name || `Game ${game._id.slice(-4)}`}</CardTitle>
+                              <CardTitle>{game.name || `SPIN WIN ${game._id.slice(-4)}`}</CardTitle>
                               <CardDescription>
                                 {game.description || `Spin and win with ${game.items?.length || 0} possible outcomes!`}
                               </CardDescription>

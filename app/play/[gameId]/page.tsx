@@ -517,7 +517,7 @@ export default function GamePage() {
                         <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                       </div>
                       <div className="text-center md:text-left md:flex-1">
-                        <h3 className="font-semibold text-lg mb-1">Bet Successfully Placed!</h3>
+                        <h3 className="font-semibold text-lg mb-1">Bet Successfully Placed! and Result will announced at 09:00 PM</h3>
                         <p className="text-muted-foreground mb-2">
                           Your bet of <span className="font-bold">{betDetails.amount} USDT</span> on <span className="font-bold">{betDetails.item}</span> has been confirmed.
                         </p>
